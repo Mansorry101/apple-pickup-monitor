@@ -1,0 +1,13 @@
+services:
+  apple-pickup-monitor:
+    build: .
+    container_name: apple-pickup-monitor
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Hong_Kong
+      - STATE_FILE=/data/state.json
+      - LOG_FILE=/data/monitor.log
+    volumes:
+      - ./data:/data

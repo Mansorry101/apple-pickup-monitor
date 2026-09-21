@@ -1,0 +1,29 @@
+# 依赖
+node_modules/
+
+# 邮箱凭据（含 16 位 SMTP 授权码，绝对不能提交）
+.env
+.env.local
+
+# 用户自己的监控配置（每台机器不同，由设置界面生成）
+config.json
+config.json.tmp
+
+# 运行产物
+state.json
+state.json.tmp
+monitor.log
+monitor.pid
+data/
+
+# 说明：catalog-cache.json 是故意提交的。
+# 它是抓好的机型和价格目录（约 100KB），带上它新克隆下来打开设置界面
+# 就能直接选机型，不用先等抓取。点界面上的「刷新机型目录」会更新它。
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
