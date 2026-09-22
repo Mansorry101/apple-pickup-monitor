@@ -7,7 +7,13 @@
 import assert from 'node:assert';
 import { loadConfig } from '../src/config.js';
 import { storeLabel } from '../src/apple.js';
-import { decideAlerts } from '../src/alerts.js';
+import { decideAlerts as planAlerts, acknowledgeAlerts } from '../src/alerts.js';
+// 本测试模拟成功发送；失败与重启由 reliability.mjs 覆盖。
+function decideAlerts(results, state, cfg, now) {
+  const plan = planAlerts(results, state, cfg, now);
+  acknowledgeAlerts([...plan.priorityItems, ...plan.otherItems, ...plan.soldOut], state, now);
+  return plan;
+}
 import { buildPriorityMail, buildReferenceMail, buildSoldOutMail } from '../src/mailer.js';
 
 const cfg = loadConfig();
@@ -85,7 +91,7 @@ console.log('\n=== 2. 邮件渲染 ===');
   const p = buildPriorityMail(items, cfg);
   assert.ok(p.subject.includes('有货'), '优先邮件标题应说明有货');
   assert.ok(p.html.includes(storeLabel(cfg.priorityStore)), '邮件正文应列出优先门店');
-  assert.ok(p.html.includes('MJYC4CH/A'), '邮件正文应列出大陆料号');
+  assert.ok(!p.html.includes('MJYC4CH/A'), '香港门店邮件不应混入大陆料号');
   assert.ok(p.html.includes('MJXU4ZA/A'), '邮件正文应列出香港料号');
   console.log(`  ✓ 优先邮件: ${p.subject}`);
   console.log(`     ${p.text.split('\n')[1]}`);

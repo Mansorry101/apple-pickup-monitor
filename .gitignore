@@ -16,6 +16,9 @@ monitor.log
 monitor.pid
 data/
 
+# 由 scripts/install-windows-task.ps1 生成，内含本机绝对路径，每次安装都会覆盖
+scripts/run-hidden.vbs
+
 # 说明：catalog-cache.json 是故意提交的。
 # 它是抓好的机型和价格目录（约 100KB），带上它新克隆下来打开设置界面
 # 就能直接选机型，不用先等抓取。点界面上的「刷新机型目录」会更新它。

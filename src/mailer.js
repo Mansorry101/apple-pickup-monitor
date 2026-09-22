@@ -59,6 +59,24 @@ function bestLink(it) {
   return it.product.buyUrl || '';
 }
 
+/** 邮件中的每一行只对应一个地区的版本、门店和购买链接。 */
+export function regionalMailItems(items) {
+  return items.flatMap((it) => {
+    const regions = it.stores?.length
+      ? [...new Set(it.stores.map((id) => STORE_BY_ID[id]?.region).filter(Boolean))]
+      : Object.keys(it.parts || {});
+    return regions.map((region) => ({
+      ...it,
+      parts: it.parts?.[region] ? { [region]: it.parts[region] } : {},
+      stores: (it.stores || []).filter((id) => STORE_BY_ID[id]?.region === region),
+      product: { ...it.product,
+        buyUrls: it.product.buyUrls?.[region] ? { [region]: it.product.buyUrls[region] } : {},
+        buyUrl: it.product.buyUrls?.[region] || '',
+      },
+    }));
+  });
+}
+
 function productRows(items) {
   return items
     .map((it) => {
@@ -106,6 +124,7 @@ function shell(title, color, subtitle, items, footerNote) {
 
 /** 优先门店有货 */
 export function buildPriorityMail(items, cfg) {
+  items = regionalMailItems(items);
   const p = cfg.priorityStoreInfo || {};
   const where = `${p.city || ''} · ${p.name || ''}`.replace(/^ · /, '');
   const label = namesLabel(items);
@@ -129,26 +148,29 @@ export function buildPriorityMail(items, cfg) {
 
 /** 其他被监控的门店有货 */
 export function buildReferenceMail(items, cfg) {
+  items = regionalMailItems(items);
   const p = cfg.priorityStoreInfo || {};
   const label = namesLabel(items);
+  const priorityStatus = items.some((i) => i.priorityKnown === false) ? '库存尚未确认' : '暂无库存';
   return {
-    subject: `🔔【其他门店有货】${label}（${p.name || '优先门店'}暂无）`,
+    subject: `🔔【其他门店有货】${label}（${p.name || '优先门店'}${priorityStatus}）`,
     html: shell(
       '🔔 其他门店有货',
       '#0b5fff',
-      `${p.city || ''}${p.name || ''} 暂无库存，以下门店可取货，可作为备选`,
+      `${p.city || ''}${p.name || ''} ${priorityStatus}，以下门店可取货，可作为备选`,
       items,
       `<div style="background:#eef4ff;border-left:3px solid #0b5fff;padding:10px 12px;border-radius:6px;margin-bottom:10px">
          程序仍在持续监控优先门店，一旦有货会立刻再发一封「🎉 有货」邮件。</div>`,
     ),
     text:
-      `【其他门店有货】优先门店暂无\n` +
+      `【其他门店有货】优先门店${priorityStatus}\n` +
       items.map((i) => `${i.product.name}（${partsLabel(i)}）: ${(i.stores || []).map(storeLabel).join('、')}`).join('\n') +
       `\n检查时间: ${cnTime()}`,
   };
 }
 
 export function buildSoldOutMail(items, cfg) {
+  items = regionalMailItems(items);
   return {
     subject: `⌛【库存已消失】${namesLabel(items)} 已不可门市取货`,
     html: shell(

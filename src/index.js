@@ -8,14 +8,16 @@
  *   node src/index.js --test-email 发一封测试邮件，验证邮箱配置
  */
 import fs from 'node:fs';
-import { loadConfig, validateMail, REGIONS } from './config.js';
+import { loadConfig, validateMail, REGIONS, STORE_BY_ID } from './config.js';
 import { ApplePickupClient, storeLabel } from './apple.js';
-import { createTransport, sendMail, buildPriorityMail, buildReferenceMail, buildSoldOutMail } from './mailer.js';
+import { createTransport, sendMail, buildPriorityMail, buildReferenceMail } from './mailer.js';
 import { loadState, saveState } from './state.js';
 import { decideAlerts } from './alerts.js';
+import { deliverAlerts } from './notifications.js';
 import { runSetup } from './setup.js';
 import { startWebUi } from './webui.js';
 import { settingsMtime } from './settings.js';
+import { VERSION } from './constants.js';
 
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
@@ -78,11 +80,23 @@ function render(results) {
   const lines = [];
   for (const r of results) {
     const parts = Object.entries(r.parts || {}).map(([k, v]) => `${rshort(k)} ${v}`).join(' / ');
-    const stores = r.stores.length ? r.stores.map(storeLabel).join('、') : '无门店有货';
+    const stores = r.stores.length ? r.stores.map(storeLabel).join('、') : r.complete === false ? '库存未知（查询未完成或失败）' : '无门店有货';
+    const warning = r.complete === false ? ' [部分地区数据未知]' : '';
     const extra = r.otherStores?.length ? `   (附近另有 ${r.otherStores.length} 家门店有货，未监控)` : '';
-    lines.push(`  • ${r.product.name}  [${parts}]\n      → ${stores}${extra}`);
+    const localLines = Object.entries(r.perRegion || {}).map(([region, d]) => {
+      const local = r.stores.filter((id) => STORE_BY_ID[id]?.region === region);
+      return rshort(region) + '版本 ' + d.partNumber + ' → ' +
+        (d.ok === false ? '库存未知' : local.map(storeLabel).join('、') || '无门店有货');
+    });
+    lines.push('  • ' + r.product.name + '\n      ' +
+      (localLines.length ? localLines.join('\n      ') : '[' + parts + '] → ' + stores) + extra + warning);
   }
   return lines.join('\n');
+}
+
+function queryErrors(results) {
+  return [...new Set(results.flatMap((r) => Object.entries(r.perRegion || {})
+    .filter(([, d]) => d.ok === false).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
 }
 
 /** 模拟测试用的"确实有货"配件（按地区给不同的料号） */
@@ -111,6 +125,20 @@ async function run() {
     process.exit(1);
   }
 
+  const status = {
+    lastCheckAt: null,
+    lastError: null,
+    results: [],
+    running: !uiOnly,
+    startedAt: new Date().toISOString(),
+    // 邮箱连通性：ok=null 表示还没验证过。界面据此显示红点，避免"邮箱坏了却一直显示正常"。
+    mail: { ok: null, error: null, checkedAt: null },
+  };
+
+  function setMailStatus(ok, error = null) {
+    status.mail = { ok, error, checkedAt: new Date().toLocaleTimeString('zh-CN') };
+  }
+
   let transport = null;
   let transportCfgSig = '';
   async function getTransport({ verify = false } = {}) {
@@ -122,11 +150,13 @@ async function run() {
         try {
           await transport.verify();
           log(`✅ SMTP 连接成功 (${cfg.mail.host}:${cfg.mail.port})`);
+          setMailStatus(true);
         } catch (e) {
           transport = null;
           console.error(`\n❌ SMTP 登录失败: ${e.message}`);
           console.error('   QQ邮箱请确认：已开启 SMTP 服务、SMTP_PASS 填的是 16 位授权码（不是登录密码）。\n');
-          process.exit(1);
+          log('监控继续运行，后续发信将重试连接。');
+          setMailStatus(false, e.message);
         }
       }
     }
@@ -135,18 +165,21 @@ async function run() {
   if (!dryRun && !uiOnly) await getTransport({ verify: true });
 
   const state = loadState(cfg.stateFile);
+  const persist = () => {
+    if (!dryRun && !uiOnly && saveState(cfg.stateFile, state) === false) {
+      throw new Error('状态持久化失败，保留待发送通知');
+    }
+  };
   let stopping = false;
   const stop = () => {
     if (stopping) process.exit(0);
     stopping = true;
     log('收到退出信号，正在停止…');
-    saveState(cfg.stateFile, state);
+    if (!dryRun && !uiOnly) saveState(cfg.stateFile, state);
     process.exit(0);
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
-
-  const status = { lastCheckAt: null, lastError: null, results: [], running: !uiOnly, startedAt: new Date().toISOString() };
 
   let client = new ApplePickupClient(cfg, log);
   let clientSig = clientSignature(cfg);
@@ -157,6 +190,9 @@ async function run() {
     if (sig !== clientSig) {
       client = new ApplePickupClient(cfg, log);
       clientSig = sig;
+      status.results = [];
+      status.lastCheckAt = null;
+      status.lastError = null;
       log(`[配置] ${why} → 监控目标已更新，重建会话`);
       log(render(productsPreview()));
     } else {
@@ -170,6 +206,7 @@ async function run() {
       parts: p.parts,
       stores: [],
       atPriority: false,
+      complete: false,
       deliveryDate: null,
     }));
 
@@ -185,6 +222,7 @@ async function run() {
       count: r.count,
       deliveryDate: r.deliveryDate,
       perRegion: r.perRegion,
+      ok: r.ok, complete: r.complete, availability: r.availability, priorityKnown: r.priorityKnown,
     }));
 
   let ui = { server: null, url: null };
@@ -195,13 +233,15 @@ async function run() {
         reload,
         status: () => status,
         runsMonitor: !uiOnly,
-        version: '2.0.0',
+        version: VERSION,
         idleExitMinutes: uiOnly ? 30 : 0,
         runCheckNow: async () => {
-          const results = await client.checkAvailability();
+          const checkClient = client;
+          const results = await checkClient.checkAvailability();
+          if (checkClient !== client) throw new Error('监控目标已变更，请重新检查');
           status.results = asStatus(results);
           status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
-          status.lastError = null;
+          status.lastError = queryErrors(results);
           log(`[界面] 手动检查完成\n${render(results)}`);
           return status.results;
         },
@@ -210,18 +250,30 @@ async function run() {
           if (errs.length) throw new Error(errs.join('；'));
           const t = await getTransport();
           const p = cfg.priorityStoreInfo || {};
-          await sendMail(t, cfg, {
-            subject: '✅ Apple 取货监控 — 测试邮件',
-            text: '这是一封测试邮件，说明通知配置正常。',
-            html: `<p>这是一封<strong>测试邮件</strong>，说明通知配置正常。</p>
+          try {
+            await sendMail(t, cfg, {
+              subject: '✅ Apple 取货监控 — 测试邮件',
+              text: '这是一封测试邮件，说明通知配置正常。',
+              html: `<p>这是一封<strong>测试邮件</strong>，说明通知配置正常。</p>
                    <p>当前优先门店：${p.city || ''} · ${p.name || ''}（${cfg.priorityStore}）</p>
                    <p>监控机型：${cfg.products.map((x) => x.name).join('、')}</p>`,
-          });
+            });
+          } catch (e) {
+            setMailStatus(false, e.message);
+            throw e;
+          }
+          setMailStatus(true);
           log(`[界面] 已发送测试邮件 → ${cfg.mail.to.join(', ')}`);
         },
       },
       log,
     );
+    if (!ui.server) {
+      const why = ui.error?.code === 'EADDRINUSE'
+        ? `设置界面端口已被其他程序占用（${ui.error.message}）`
+        : `设置界面启动失败：${ui.error?.message || '未知原因'}`;
+      throw new Error(`${why}；请先关闭旧监控，再启动新版。如需无界面运行请使用 --no-ui`);
+    }
   }
 
   if (uiOnly) {
@@ -242,42 +294,35 @@ async function run() {
         reload('检测到 config.json 变化');
       }
 
-      const results = await client.checkAvailability();
-      log(`#${cycle} 检查完成 (${Date.now() - started}ms)\n${render(results)}`);
-      status.results = asStatus(results);
-      status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
-      status.lastError = null;
-
-      const { priorityItems, isReminder, otherItems, soldOut } = decideAlerts(results, state, cfg);
-      saveState(cfg.stateFile, state);
-
-      const t = dryRun ? null : await getTransport();
-      const pname = cfg.priorityStoreInfo?.name || '优先门店';
-      if (priorityItems.length) {
-        const mail = buildPriorityMail(priorityItems, cfg);
-        mail.subject = `${isReminder ? '⏰【仍在售】' : ''}${mail.subject}`;
-        if (dryRun) log(`📧 [DRY-RUN] 将发送【${pname}有货】: ${mail.subject}`);
-        else {
-          await sendMail(t, cfg, mail);
-          log(`📧 已发送【${pname}有货】通知 → ${cfg.mail.to.join(', ')}`);
-        }
-      }
-      if (!cfg.priorityOnly && otherItems.length) {
-        const mail = buildReferenceMail(otherItems, cfg);
-        if (dryRun) log(`📧 [DRY-RUN] 将发送【其他门店有货】: ${mail.subject}`);
-        else {
-          await sendMail(t, cfg, mail);
-          log(`📧 已发送【其他门店有货】通知`);
-        }
-      }
-      if (cfg.soldOutNotify && soldOut.length) {
-        const mail = buildSoldOutMail(soldOut, cfg);
-        if (dryRun) log(`📧 [DRY-RUN] 将发送【库存已消失】: ${mail.subject}`);
-        else {
-          await sendMail(t, cfg, mail);
-          log(`📧 已发送【库存已消失】通知`);
-        }
-      }
+      const checkClient = client;
+      const checkCfg = cfg;
+      const mailErrors = new Set();
+      await checkClient.checkAvailability({ onUpdate: async (results) => {
+        // 设置变更后的旧查询不能更新状态或发送通知。
+        if (checkCfg !== cfg) return;
+        status.results = asStatus(results);
+        status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
+        log('#' + cycle + ' 地区结果更新 (' + (Date.now() - started) + 'ms)\n' + render(results));
+        const errors = await deliverAlerts(results, state, checkCfg, {
+          persist, dryRun, log,
+          send: async (mail) => {
+            if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
+            const t = await getTransport();
+            if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
+            try {
+              const info = await sendMail(t, checkCfg, mail);
+              setMailStatus(true);
+              return info;
+            } catch (e) {
+              // 发信失败要反映到界面状态，否则邮箱坏了会被"监控中"掩盖。
+              setMailStatus(false, e.message);
+              throw e;
+            }
+          },
+        });
+        for (const error of errors) mailErrors.add(error);
+        status.lastError = [queryErrors(results), ...mailErrors].filter(Boolean).join('；') || null;
+      } });
     } catch (e) {
       log(`#${cycle} ❌ 本轮检查失败: ${e.message}`);
       status.lastError = e.message;

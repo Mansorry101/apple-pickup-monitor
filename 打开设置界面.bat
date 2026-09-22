@@ -25,8 +25,17 @@ if errorlevel 1 (
   powershell -NoProfile -Command "$u='http://127.0.0.1:%PORT%/'; for($i=0;$i -lt 30;$i++){ try{ Invoke-WebRequest $u -TimeoutSec 2 -UseBasicParsing | Out-Null; exit 0 }catch{ Start-Sleep -Milliseconds 700 } }; exit 1"
   if errorlevel 1 (
     echo.
-    echo [错误] 设置界面启动失败。
-    echo        请先确认已安装 Node.js，然后重新双击本文件。
+    rem 端口在监听但 HTTP 探测失败，多半是被别的程序占用，而不是 Node.js 没装
+    powershell -NoProfile -Command "$c=New-Object Net.Sockets.TcpClient; try{$c.Connect('127.0.0.1',%PORT%); exit 0}catch{exit 1} finally{$c.Dispose()}" >nul 2>nul
+    if errorlevel 1 (
+      echo [错误] 设置界面启动失败。
+      echo        请先确认已安装 Node.js，然后重新双击本文件。
+      echo        详细原因见 monitor.log。
+    ) else (
+      echo [错误] 端口 %PORT% 已被其他程序占用，设置界面无法启动。
+      echo        请关闭占用该端口的程序；或打开 config.json，
+      echo        把 "uiPort" 改成别的端口（例如 8788）后重新双击本文件。
+    )
     echo.
     pause
     exit /b 1

@@ -16,7 +16,7 @@ import { ROOT } from './constants.js';
 import { STORE_BY_ID, SEARCHABLE_REGIONS, REGIONS } from './stores.js';
 import { findVariant, findVariantByKey } from './catalog.js';
 
-export const SETTINGS_FILE = path.join(ROOT, 'config.json');
+export const SETTINGS_FILE = process.env.SETTINGS_FILE || path.join(ROOT, 'config.json');
 export const CATALOG_CACHE = path.join(ROOT, 'catalog-cache.json');
 
 /**
@@ -210,4 +210,19 @@ export function settingsMtime() {
   } catch {
     return 0;
   }
+}
+
+/** 保存的目标保留完整映射；运行时只使用所选门店所在地区的版本。 */
+export function scopeProductsByStores(products, storeIds) {
+  const regions = regionsOfStores(storeIds);
+  const select = (values) => Object.fromEntries(regions
+    .filter((r) => values?.[r] !== undefined).map((r) => [r, values[r]]));
+  return products.map((p) => {
+    const parts = select(p.parts);
+    const buyUrls = select(p.buyUrls);
+    const firstRegion = regions.find((r) => parts[r]);
+    return { ...p, parts, buyUrls, prices: select(p.prices),
+      partNumber: firstRegion ? parts[firstRegion] : undefined,
+      buyUrl: firstRegion ? buyUrls[firstRegion] || '' : '' };
+  });
 }

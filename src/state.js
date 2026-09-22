@@ -20,7 +20,9 @@ export function saveState(file, state) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf8');
     fs.renameSync(tmp, file);
+    return true;
   } catch (e) {
     console.error(`[状态] 写入失败: ${e.message}`);
+    return false;
   }
 }

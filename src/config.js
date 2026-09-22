@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './constants.js';
 import { STORES, STORE_BY_ID, REGIONS, SEARCHABLE_REGIONS } from './stores.js';
-import { loadSettings, CATALOG_CACHE, regionsOfStores } from './settings.js';
+import { loadSettings, CATALOG_CACHE, regionsOfStores, scopeProductsByStores } from './settings.js';
 import { loadCatalogCache, findVariantByKey, findVariant, FAMILY_SLUGS } from './catalog.js';
 
 export { ROOT, STORES, STORE_BY_ID, REGIONS, SEARCHABLE_REGIONS };
@@ -62,7 +62,7 @@ export function loadConfig() {
   const catalog = loadCatalogCache(CATALOG_CACHE);
 
   // 用机型目录补全「两地料号 + 直达链接 + 价格」（没有缓存时退回 settings 里存的料号）
-  const products = settings.targets.map((t) => {
+  const products = scopeProductsByStores(settings.targets.map((t) => {
     const v = t.key ? findVariantByKey(catalog, t.key) : null;
     const fallback = v || findVariant(catalog, Object.values(t.parts || {})[0]);
     const parts = { ...(t.parts || {}), ...((fallback && fallback.parts) || {}) };
@@ -80,10 +80,7 @@ export function loadConfig() {
       // 兼容旧字段：优先地区的料号 / 链接
       partNumber: undefined,
     };
-  }).map((p) => {
-    const firstRegion = SEARCHABLE_REGIONS.find((r) => p.parts[r]) || 'HK';
-    return { ...p, partNumber: p.parts[firstRegion], buyUrl: p.buyUrls[firstRegion] || '' };
-  });
+  }), settings.watchStores);
 
   const watchStores = settings.watchStores.filter((id) => STORE_BY_ID[id]);
   const watchRegions = regionsOfStores(watchStores);

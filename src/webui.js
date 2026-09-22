@@ -12,6 +12,7 @@ import { REGIONS, REGION_ORDER, CITIES, STORES, STORE_BY_ID } from './stores.js'
 import { loadSettings, saveSettings, enrichTargets, CATALOG_CACHE } from './settings.js';
 import { fetchCatalog, loadCatalogCache, saveCatalogCache } from './catalog.js';
 import { PAGE } from './webui-page.js';
+import { VERSION } from './constants.js';
 
 const json = (res, code, obj) => {
   res.writeHead(code, {
@@ -106,7 +107,7 @@ export function startWebUi(ctx, log = console.log) {
           },
           status: ctx.status(),
           runsMonitor: ctx.runsMonitor !== false,
-          version: ctx.version || '2.0.0',
+          version: ctx.version || VERSION,
         });
       }
 
@@ -192,7 +193,7 @@ export function startWebUi(ctx, log = console.log) {
       } else {
         log(`[界面] 启动失败: ${e.message}`);
       }
-      resolve({ server: null, port: null, url: null });
+      resolve({ server: null, port: null, url: null, error: e });
     });
   });
 }

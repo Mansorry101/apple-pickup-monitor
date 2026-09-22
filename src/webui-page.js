@@ -188,7 +188,12 @@ export const PAGE = `<!doctype html>
     setTimeout(function () { t.classList.remove('show'); }, 2800);
   }
   function api(path, opts) {
-    return fetch(path, opts || {}).then(function (r) { return r.json(); });
+    return fetch(path, opts || {}).then(function (r) {
+      return r.json().then(function (body) {
+        if (!r.ok) throw new Error(body.error || '请求失败');
+        return body;
+      });
+    });
   }
   function post(path, body) {
     return api(path, {
@@ -202,6 +207,10 @@ export const PAGE = `<!doctype html>
   function dir() { return state.boot.directory || { regions: [], cities: [], stores: [] }; }
   function cat() { return state.boot.catalog || { families: [], variants: [] }; }
   function settings() { return state.boot.settings; }
+  function markDirty() {
+    state.dirty = true;
+    renderStatus();
+  }
 
   function storeById(id) {
     var list = dir().stores || [];
@@ -233,16 +242,21 @@ export const PAGE = `<!doctype html>
   }
   function money(n, cur) { return n ? cur + Number(n).toLocaleString('en-US') : ''; }
 
+  function selectedRegions() {
+    return Array.from(new Set(settings().watchStores.concat([settings().priorityStore]).map(function (id) {
+      var store = storeById(id); return store ? store.region : null;
+    }).filter(Boolean)));
+  }
   function partsLabel(v) {
     if (!v || !v.parts) return '';
     var out = [];
-    for (var r in v.parts) if (v.parts[r]) out.push(regionShort(r) + ' ' + v.parts[r]);
+    for (var r in v.parts) if (v.parts[r] && selectedRegions().indexOf(r) >= 0) out.push(regionShort(r) + ' ' + v.parts[r]);
     return out.join(' / ');
   }
   function priceLabel(v) {
     if (!v || !v.prices) return '';
     var out = [];
-    for (var r in v.prices) if (v.prices[r]) out.push(money(v.prices[r], regionCurrency(r)));
+    for (var r in v.prices) if (v.prices[r] && selectedRegions().indexOf(r) >= 0) out.push(money(v.prices[r], regionCurrency(r)));
     return out.join(' / ');
   }
   function variantName(v) { return v ? (v.family + ' ' + v.capacity + ' ' + (v.colorZh || v.color)) : ''; }
@@ -340,10 +354,11 @@ export const PAGE = `<!doctype html>
       b.onclick = function () {
         var id = b.getAttribute('data-rm');
         settings().watchStores = settings().watchStores.filter(function (x) { return x !== id; });
-        state.dirty = true;
+        markDirty();
         renderWatch();
       };
     });
+    renderTargets();
     if (!settings().watchStores.length) {
       el('w-list').innerHTML = '<div class="empty">还没有监控门店。</div>';
     }
@@ -411,9 +426,7 @@ export const PAGE = `<!doctype html>
     el('targets').innerHTML = ts.map(function (t) {
       var v = variantByKey(t.key);
       var name = v ? variantName(v) : (t.name || t.key);
-      var parts = v ? partsLabel(v) : Object.keys(t.parts || {}).map(function (r) {
-        return regionShort(r) + ' ' + t.parts[r];
-      }).join(' / ');
+      var parts = partsLabel(v || t) || '所选门店地区没有对应料号，暂不查询此机型';
       var price = v ? priceLabel(v) : '';
       return '<div class="item"><div><div>' + esc(name) + '</div>' +
         '<div class="meta">' + esc(parts) + (price ? ' · ' + esc(price) : '') + '</div></div>' +
@@ -423,7 +436,7 @@ export const PAGE = `<!doctype html>
       b.onclick = function () {
         var k = b.getAttribute('data-rm');
         settings().targets = settings().targets.filter(function (t) { return t.key !== k; });
-        state.dirty = true;
+        markDirty();
         renderTargets();
       };
     });
@@ -444,7 +457,7 @@ export const PAGE = `<!doctype html>
       });
       existing[k] = 1; added++;
     });
-    if (added) { state.dirty = true; renderTargets(); }
+    if (added) { markDirty(); renderTargets(); }
     return added;
   }
 
@@ -458,23 +471,47 @@ export const PAGE = `<!doctype html>
 
   function renderMail() {
     var m = state.boot.mail || {};
+    var st = state.boot.status || {};
+    var ms = st.mail || {};
+    var smtp;
+    if (ms.ok === true) {
+      smtp = '<div style="color:#1a7f37;margin-top:4px">✅ SMTP 连接正常' +
+        (ms.checkedAt ? '（' + esc(ms.checkedAt) + ' 验证）' : '') + '</div>';
+    } else if (ms.ok === false) {
+      smtp = '<div style="color:#c00;margin-top:4px">❌ SMTP 连接失败：' + esc(ms.error || '未知错误') +
+        '<br>库存查询仍在运行，但通知发不出去。请检查授权码，然后点「发送测试邮件」重试。</div>';
+    } else {
+      smtp = '<div style="color:#86868b;margin-top:4px">SMTP 尚未验证：点「发送测试邮件」可验证。</div>';
+    }
     if (!m.configured) {
-      el('mailbox').innerHTML = '<span style="color:#c00">邮箱尚未配置。</span> 请先运行配置向导（双击「重新配置邮箱.bat」）。';
+      el('mailbox').innerHTML = '<span style="color:#c00">邮箱尚未配置。</span> 请先运行配置向导（双击「重新配置邮箱.bat」）。' + smtp;
       return;
     }
     el('mailbox').innerHTML = '发件邮箱：<b>' + esc(m.from) + '</b><br>收件邮箱：<b>' +
-      esc((m.to || []).join('、')) + '</b>';
+      esc((m.to || []).join('、')) + '</b>' + smtp;
   }
 
   function renderStatus() {
     var st = state.boot.status || {};
     var dot = el('s-dot'), txt = el('s-text');
+    var mailBad = Boolean(st.mail && st.mail.ok === false);
+    var mailNote = mailBad ? ' ⚠️ 邮箱发信异常，通知可能发不出去。' : '';
+    if (state.dirty) {
+      dot.className = 'dot warn'; txt.textContent = '设置待保存';
+      el('status-hint').textContent = '立即检查会先保存当前选择，再查询对应地区版本。';
+      el('results').innerHTML = '<div class="empty">选择已变更，旧库存结果已隐藏。请点击「立即检查一次」。</div>';
+      return;
+    }
     if (!state.boot.runsMonitor) {
       dot.className = 'dot idle'; txt.textContent = '仅设置模式（未在监控）';
-      el('status-hint').textContent = '当前只打开了设置界面。关闭后运行「一键部署.bat」或重启服务即开始监控。';
+      el('status-hint').textContent = '当前只打开了设置界面。关闭后运行「一键部署.bat」或重启服务即开始监控。' + mailNote;
     } else if (st.lastError) {
       dot.className = 'dot err'; txt.textContent = '上次检查出错';
-      el('status-hint').textContent = '上次检查出错：' + st.lastError;
+      el('status-hint').textContent = '上次检查出错：' + st.lastError + mailNote;
+    } else if (mailBad) {
+      dot.className = 'dot err'; txt.textContent = '监控中 · 邮件发送异常';
+      el('status-hint').textContent = '邮件发送异常：' + (st.mail.error || '未知错误') +
+        '。库存查询照常运行，但通知发不出去，请检查邮箱授权码。';
     } else if (st.lastCheckAt) {
       dot.className = 'dot ok'; txt.textContent = '监控中 · 上次检查 ' + st.lastCheckAt;
       el('status-hint').textContent = '优先门店：' + priorityLabel();
@@ -490,14 +527,21 @@ export const PAGE = `<!doctype html>
     }
     el('results').innerHTML = rs.map(function (r) {
       var stores = (r.storeLabels && r.storeLabels.length) ? r.storeLabels.join('、')
-        : ((r.stores && r.stores.length) ? r.stores.join('、') : '无门店有货');
+        : ((r.stores && r.stores.length) ? r.stores.join('、') : r.complete === false ? '库存未知（查询未完成或失败）' : '无门店有货');
       var parts = [];
       for (var reg in (r.parts || {})) parts.push(regionShort(reg) + ' ' + r.parts[reg]);
-      var badge = r.atPriority ? ' ✅ 优先门店有货' : '';
+      var regionRows = Object.keys(r.perRegion || {}).map(function (reg) {
+        var d = r.perRegion[reg];
+        var local = (r.stores || []).filter(function (id) { var s = storeById(id); return s && s.region === reg; });
+        var names = local.map(function (id) { var s = storeById(id); return s.city + ' · ' + s.name; });
+        return '<div>' + esc(regionShort(reg) + '版本 · ' + d.partNumber + ' → ' +
+          (d.ok === false ? '库存未知（查询未完成或失败）' : names.join('、') || '无门店有货')) + '</div>';
+      }).join('');
+      var badge = (r.atPriority ? ' ✅ 优先门店有货' : '') + (r.complete === false ? ' · 部分地区数据未知' : '');
       var other = (r.otherStores && r.otherStores.length) ? '（附近另有 ' + r.otherStores.length + ' 家未监控门店有货）' : '';
       return '<div class="res"><div>' + esc(r.name) +
         '<div class="meta" style="color:#86868b;font-size:11.5px">' + esc(parts.join(' / ')) + '</div></div>' +
-        '<div class="' + (r.atPriority ? 'hit' : 'miss') + '">' + esc(stores) + badge + esc(other) + '</div></div>';
+        '<div class="' + (r.atPriority ? 'hit' : 'miss') + '">' + (regionRows || esc(stores)) + badge + esc(other) + '</div></div>';
     }).join('');
   }
 
@@ -541,6 +585,7 @@ export const PAGE = `<!doctype html>
     if (watch.indexOf(pri) < 0) watch.unshift(pri);
     return {
       priorityStore: pri,
+      uiPort: settings().uiPort,
       watchStores: watch,
       pollIntervalSeconds: Number(el('interval').value),
       priorityOnly: el('priorityOnly').checked,
@@ -557,10 +602,11 @@ export const PAGE = `<!doctype html>
       if (r.ok) {
         state.boot.settings = r.settings;
         state.dirty = false;
+        renderWatch(); refreshModelSelects(); renderTargets();
         toast('已保存，监控即刻按新配置运行');
         return refreshStatus();
       }
-      toast('保存失败：' + (r.error || '未知错误'));
+      throw new Error('保存失败：' + (r.error || '未知错误'));
     }).finally(function () {
       btn.disabled = false; btn.textContent = '保存并生效';
     });
@@ -585,15 +631,16 @@ export const PAGE = `<!doctype html>
 
       el('p-city').onchange = function () {
         fillStoreSelect(el('p-store'), el('p-city').value);
-        updateAddr();
-        renderWatch();
+        el('p-store').onchange();
       };
       el('p-store').onchange = function () {
         var id = el('p-store').value;
         if (!id) return;
+        var previous = settings().priorityStore;
+        settings().watchStores = settings().watchStores.filter(function (store) { return store !== previous; });
         settings().priorityStore = id;
         if (settings().watchStores.indexOf(id) < 0) settings().watchStores.unshift(id);
-        state.dirty = true;
+        markDirty();
         updateAddr(); renderWatch();
       };
 
@@ -606,7 +653,7 @@ export const PAGE = `<!doctype html>
         if (!id || sel.disabled) { toast('这个城市不支持查询库存'); return; }
         if (settings().watchStores.indexOf(id) >= 0) { toast('这个门店已经在监控列表里了'); return; }
         settings().watchStores.push(id);
-        state.dirty = true;
+        markDirty();
         renderWatch();
         toast('已添加 ' + sel.options[sel.selectedIndex].textContent);
       };
@@ -629,10 +676,12 @@ export const PAGE = `<!doctype html>
         toast(n ? ('已添加 ' + n + ' 个颜色') : '这个容量的颜色都已经在列表里了');
       };
 
-      el('btn-save').onclick = save;
+      el('btn-save').onclick = function () { return save().catch(function (e) { toast(e.message); }); };
       el('btn-check').onclick = function () {
         var b = this; b.disabled = true; b.textContent = '检查中…';
-        return post('/api/check').then(function (r) {
+        return (state.dirty ? save() : Promise.resolve()).then(function () {
+          return post('/api/check');
+        }).then(function (r) {
           state.boot.status = r.status;
           renderStatus();
           toast('检查完成');
@@ -673,7 +722,7 @@ export const PAGE = `<!doctype html>
         }
         var parts = {}; parts[reg] = pn;
         ts.push({ key: pn, name: pn, parts: parts, buyUrls: {} });
-        state.dirty = true;
+        markDirty();
         el('manual-pn').value = '';
         renderTargets();
         toast('已添加 ' + pn);
