@@ -27,8 +27,21 @@ import { REGIONS, STORE_BY_ID, storeLabel, CITY_KEY, CITY_BY_KEY } from './store
 
 export { storeLabel };
 
-const MAX_PARTS_PER_REQUEST = 8; // 实测 12 也可用，留点余量
+const MAX_PARTS_PER_REQUEST = 12; // 接口实测可用 12，减少机型较多时的分批请求
+const CITY_QUERY_CONCURRENCY = 3;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index], index);
+    }
+  }));
+  return results;
+}
 
 class CookieJar {
   constructor() { this.cookies = new Map(); }
@@ -199,15 +212,18 @@ export class ApplePickupClient {
     this.sessions = new Map();
   }
 
-  session(regionId) {
-    if (!this.sessions.has(regionId)) {
+  session(regionId, locationKey = '') {
+    // 城市键本身带地区前缀（如 CN:上海），拼会话键时去掉，避免出现会话键 CN:CN:上海
+    const city = locationKey.startsWith(regionId + ':') ? locationKey.slice(regionId.length + 1) : locationKey;
+    const key = city ? `${regionId}:${city}` : regionId;
+    if (!this.sessions.has(key)) {
       const s = new RegionSession(regionId, this.cfg, this.log);
       // 接口要求带 store 参数才会返回门店数据，用监控范围内的门店当触发器
       s.fallbackStore =
         this.cfg.priorityStoreFor?.[regionId] || this.cfg.defaultStoreFor?.[regionId] || '';
-      this.sessions.set(regionId, s);
+      this.sessions.set(key, s);
     }
-    return this.sessions.get(regionId);
+    return this.sessions.get(key);
   }
 
   /** 需要查询的地区：监控门店所在地区 ∩ 监控机型有料号的地区 */
@@ -238,15 +254,21 @@ export class ApplePickupClient {
     return task;
   }
 
-  async collectAvailability({ onUpdate } = {}) {
-    const regions = this.activeRegions();
+  async collectAvailability({ onUpdate, only } = {}) {
+    const active = this.activeRegions();
+    // only：本轮只查这几个地区（各地区间隔不同，香港会查得更频繁）
+    const regions = Array.isArray(only) && only.length ? active.filter((r) => only.includes(r)) : active;
     if (!regions.length) throw new Error('没有可查询的地区：请检查监控门店与监控机型');
     const products = this.cfg.products;
     const acc = new Map(products.map((p) => [p.key, { stores: new Set(), perRegion: {} }]));
-    for (const p of products) for (const r of regions) {
-      if (p.parts[r]) acc.get(p.key).perRegion[r] = {
-        partNumber: p.parts[r], stores: [], ok: false, error: '查询尚未完成',
-      };
+    for (const p of products) for (const r of active) {
+      if (!p.parts[r]) continue;
+      // 本轮不查的地区标成 pending：界面上写「等待下一轮」，
+      // 而且它的 ok 是 false，complete 因此为 false —— 拿不到新数据时
+      // 就不会用旧数据下「已售罄」的结论。
+      acc.get(p.key).perRegion[r] = regions.includes(r)
+        ? { partNumber: p.parts[r], stores: [], ok: false, error: '查询尚未完成' }
+        : { partNumber: p.parts[r], stores: [], ok: false, pending: true, error: '本轮未查询' };
     }
     let updates = Promise.resolve();
     // 每个地区有独立会话；最多大陆、香港两个并发查询。
@@ -312,71 +334,63 @@ export class ApplePickupClient {
       const perCity = cityPasses.map(() => new Map());
       const delivery = {};
       try {
-        const sess = this.session(regionId);
-        const stale = !sess.ready || Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
-        if (stale) {
-          sess.jar.clear();
-          await sess.ensureSession();
-        }
-
-        let allGood = true;
-        for (let ci = 0; ci < cityPasses.length; ci++) {
-          const city = cityPasses[ci];
-          if (city) await sess.setLocation(city);
-
-          // 会话刚建立、或刚换过定位时，第一次查询常常返回空数据。
-          // 必须先拿哨兵热身，否则会把"接口没准备好"误判成"没货"。
-          const warmKey = city ? city.key : '';
-          if (sess.warmedKey !== warmKey) {
-            const warm = await sess.warmUp();
-            if (!warm) {
-              allGood = false;
-              this.log(`[校验:${R.short}] 第 ${attempt} 次：热身失败（${city ? city.city : '默认'}）`);
-              break;
+        await mapLimit(cityPasses, CITY_QUERY_CONCURRENCY, async (city, ci) => {
+          // 大陆会话固定到单个城市，定位与热身结果可跨轮询复用。
+          const sess = this.session(regionId, city?.key || '');
+          try {
+            const stale = !sess.ready || Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
+            if (stale) {
+              sess.jar.clear();
+              await sess.ensureSession();
             }
-            sess.warmedKey = warmKey;
-          }
+            if (city) await sess.setLocation(city);
 
-          const uniqueParts = [...new Set(parts)];
-          const raw = [];
-          for (let i = 0; i < uniqueParts.length; i += MAX_PARTS_PER_REQUEST - 1) {
-            const chunk = [...new Set([R.canaryPart, ...uniqueParts.slice(i, i + MAX_PARTS_PER_REQUEST - 1)])];
-            const content = await sess.queryParts(chunk, store);
-            if (!Array.isArray(content) || !sess.isHealthy(content)) {
-              throw new Error(R.label + '：本批哨兵无数据，库存未知');
+            // 会话刚建立、或刚换过定位时，第一次查询常常返回空数据。
+            // 每个城市复用独立会话，热身仅在会话首次建立时执行。
+            const warmKey = city ? city.key : '';
+            if (sess.warmedKey !== warmKey) {
+              const warm = await sess.warmUp();
+              if (!warm) throw new Error(`${R.label}：热身失败（${city ? city.city : '默认'}）`);
+              sess.warmedKey = warmKey;
             }
-            for (const pn of chunk) {
-              const matches = content.filter((item) => item?.partNumber === pn);
-              if (matches.length !== 1) throw new Error(R.label + '：库存响应缺失或重复料号 ' + pn);
-              const item = matches[0];
-              const count = item.partAvailableStoresCount;
-              if (count === null || count === undefined || (typeof count === 'string' && !count.trim()) ||
-                  !['number', 'string'].includes(typeof count) || !Number.isInteger(Number(count)) || Number(count) < 0 ||
-                  (Number(count) > 0 && (typeof item.eligibleStores !== 'string' || !storesOf(item).length)) ||
-                  (Number(count) === 0 && String(item.eligibleStores || '').trim())) {
-                throw new Error(R.label + '：库存字段不完整或矛盾 ' + pn);
+
+            const uniqueParts = [...new Set(parts)];
+            const raw = [];
+            for (let i = 0; i < uniqueParts.length; i += MAX_PARTS_PER_REQUEST - 1) {
+              const chunk = [...new Set([R.canaryPart, ...uniqueParts.slice(i, i + MAX_PARTS_PER_REQUEST - 1)])];
+              const content = await sess.queryParts(chunk, store);
+              if (!Array.isArray(content) || !sess.isHealthy(content)) {
+                throw new Error(R.label + '：本批哨兵无数据，库存未知');
               }
+              for (const pn of chunk) {
+                const matches = content.filter((item) => item?.partNumber === pn);
+                if (matches.length !== 1) throw new Error(R.label + '：库存响应缺失或重复料号 ' + pn);
+                const item = matches[0];
+                const count = item.partAvailableStoresCount;
+                if (count === null || count === undefined || (typeof count === 'string' && !count.trim()) ||
+                    !['number', 'string'].includes(typeof count) || !Number.isInteger(Number(count)) || Number(count) < 0 ||
+                    (Number(count) > 0 && (typeof item.eligibleStores !== 'string' || !storesOf(item).length)) ||
+                    (Number(count) === 0 && String(item.eligibleStores || '').trim())) {
+                  throw new Error(R.label + '：库存字段不完整或矛盾 ' + pn);
+                }
+              }
+              raw.push(...content);
             }
-            raw.push(...content);
-          }
 
-          const m = perCity[ci];
-          const targetParts = new Set(parts);
-          for (const item of raw) {
-            // 只收监控目标；哨兵是额外塞进去做健康检查的。
-            // 注意别用 partNumber === canaryPart 来判断 —— 用户完全可能
-            // 正好把哨兵那款机型设成监控目标，那样会被静默丢掉。
-            if (!targetParts.has(item.partNumber)) continue;
-            m.set(item.partNumber, new Set(storesOf(item)));
-            const d = item.deliveryMessage?.deliveryOptions?.[0]?.date;
-            if (d) delivery[item.partNumber] = d;
+            const m = perCity[ci];
+            const targetParts = new Set(parts);
+            for (const item of raw) {
+              // 只收监控目标；哨兵是额外塞进去做健康检查的。
+              if (!targetParts.has(item.partNumber)) continue;
+              m.set(item.partNumber, new Set(storesOf(item)));
+              const d = item.deliveryMessage?.deliveryOptions?.[0]?.date;
+              if (d) delivery[item.partNumber] = d;
+            }
+          } catch (e) {
+            sess.ready = false;
+            throw e;
           }
-        }
-        if (!allGood) {
-          sess.ready = false;
-          await sleep(1200 * attempt);
-          continue;
-        }
+        });
 
         // 汇总：每个目标在这几个城市的并集
         const out = {};
@@ -396,7 +410,7 @@ export class ApplePickupClient {
       } catch (e) {
         lastError = e;
         this.log(`[重试:${R.short}] 第 ${attempt}/${this.cfg.maxRetries} 次失败: ${e.message}`);
-        this.session(regionId).ready = false;
+        for (const city of cityPasses) this.session(regionId, city?.key || '').ready = false;
         if (attempt === this.cfg.maxRetries) throw e;
         await sleep(Math.min(1500 * attempt, 10_000));
       }
@@ -414,7 +428,13 @@ export class ApplePickupClient {
     const allEligible = new Set();
     const perRegion = {};
     for (const [r, d] of Object.entries(data?.perRegion || {})) {
-      perRegion[r] = { partNumber: d.partNumber, stores: [...d.stores], ok: d.ok !== false, error: d.error || null };
+      perRegion[r] = {
+        partNumber: d.partNumber,
+        stores: [...d.stores],
+        ok: d.ok !== false,
+        error: d.error || null,
+        pending: Boolean(d.pending),
+      };
       for (const s of d.stores) allEligible.add(s);
     }
 

@@ -48,6 +48,8 @@ export const DEFAULT_SETTINGS = {
   soldOutNotify: true,
   repeatAlertMinutes: 15,
   pollIntervalSeconds: 60,
+  // 香港不需要定位、一次请求就有结果，单独给一个更短的间隔
+  hkIntervalSeconds: 5,
   uiPort: 8787,
   targets: [
     { key: 'iPhone 18 Pro Max|512GB|Silver', name: 'iPhone 18 Pro Max 512GB 银色', parts: { HK: 'MJXU4ZA/A' } },
@@ -101,7 +103,8 @@ export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
     priorityOnly,
     soldOutNotify: s.soldOutNotify !== false,
     repeatAlertMinutes: clampInt(s.repeatAlertMinutes, 15, 0, 24 * 60),
-    pollIntervalSeconds: clampInt(s.pollIntervalSeconds, 60, 30, 24 * 3600),
+    pollIntervalSeconds: clampInt(s.pollIntervalSeconds, 60, 15, 24 * 3600),
+    hkIntervalSeconds: clampInt(s.hkIntervalSeconds, 5, 3, 24 * 3600),
     uiPort: clampInt(s.uiPort, 8787, 1024, 65535),
     targets: [],
   };

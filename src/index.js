@@ -17,6 +17,7 @@ import { deliverAlerts } from './notifications.js';
 import { runSetup } from './setup.js';
 import { startWebUi } from './webui.js';
 import { settingsMtime } from './settings.js';
+import { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs } from './scheduler.js';
 import { VERSION } from './constants.js';
 
 const argv = process.argv.slice(2);
@@ -61,7 +62,12 @@ function banner(extra = '') {
   }
   console.log(` 查询地区 : ${cfg.watchRegions.map(rshort).join('、') || '(无)'}`);
   console.log(` 监控机型 : ${cfg.products.map((x) => x.name).join('  |  ')}`);
-  console.log(` 轮询间隔 : ${cfg.intervalSeconds} 秒`);
+  const intervalText = cfg.watchRegions.length
+    ? cfg.watchRegions
+        .map((r) => (r === 'HK' ? `香港 ${cfg.hkIntervalSeconds} 秒` : `${rshort(r)} ${cfg.intervalSeconds} 秒`))
+        .join('，')
+    : '—';
+  console.log(` 轮询间隔 : ${intervalText}`);
   console.log(` 通知邮箱 : ${cfg.mail.to.join(', ') || '(未配置)'}`);
   if (extra) console.log(` ${extra}`);
   console.log('='.repeat(68));
@@ -86,7 +92,7 @@ function render(results) {
     const localLines = Object.entries(r.perRegion || {}).map(([region, d]) => {
       const local = r.stores.filter((id) => STORE_BY_ID[id]?.region === region);
       return rshort(region) + '版本 ' + d.partNumber + ' → ' +
-        (d.ok === false ? '库存未知' : local.map(storeLabel).join('、') || '无门店有货');
+        (d.ok === false ? (d.pending ? '等待下一轮查询' : '库存未知') : local.map(storeLabel).join('、') || '无门店有货');
     });
     lines.push('  • ' + r.product.name + '\n      ' +
       (localLines.length ? localLines.join('\n      ') : '[' + parts + '] → ' + stores) + extra + warning);
@@ -95,8 +101,9 @@ function render(results) {
 }
 
 function queryErrors(results) {
+  // pending = 本轮没轮到这个地区（各自间隔不同），不是错误
   return [...new Set(results.flatMap((r) => Object.entries(r.perRegion || {})
-    .filter(([, d]) => d.ok === false).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
+    .filter(([, d]) => d.ok === false && !d.pending).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
 }
 
 /** 模拟测试用的"确实有货"配件（按地区给不同的料号） */
@@ -184,9 +191,15 @@ async function run() {
   let client = new ApplePickupClient(cfg, log);
   let clientSig = clientSignature(cfg);
 
+  // 各地区「下次该查的时间」：香港不需要定位、一次请求就有结果，
+  // 用 hkIntervalSeconds 单独调度，大陆仍按 pollIntervalSeconds 走。
+  const dueAt = {};
+
   function reload(why = '配置变更') {
     cfg = loadConfig();
     const sig = clientSignature(cfg);
+    // 间隔可能刚被改小（比如香港从 60 秒改成 5 秒），清掉旧的到期时间才能立刻生效
+    for (const key of Object.keys(dueAt)) delete dueAt[key];
     if (sig !== clientSig) {
       client = new ApplePickupClient(cfg, log);
       clientSig = sig;
@@ -284,9 +297,41 @@ async function run() {
 
   let cycle = 0;
   let lastSettingsMtime = settingsMtime();
+  const intervalMsOf = (region) => (region === 'HK' ? cfg.hkIntervalSeconds : cfg.intervalSeconds) * 1000;
+  const regionPrint = {};
+  let lastFingerprint = null;
   while (!stopping) {
+    const active = client.activeRegions();
+
+    if (!active.length) {
+      // 没有可查询的地区：跑一次检查把原因打出来，再按普通间隔等下一轮
+      cycle++;
+      const started = Date.now();
+      try {
+        await client.checkAvailability();
+      } catch (e) {
+        log(`#${cycle} ❌ 本轮检查失败: ${e.message}`);
+        status.lastError = e.message;
+      }
+      await sleep(nextDueAt(started, cfg.intervalSeconds * 1000, pollJitterMs(cfg.intervalSeconds * 1000)) - Date.now());
+      continue;
+    }
+
+    const due = dueRegions(dueAt, active, Date.now());
+    if (!due.length) {
+      // 还没轮到任何地区：睡到最近一个地区到期
+      await sleep(msUntilNextDue(dueAt, active, Date.now()));
+      continue;
+    }
+
     cycle++;
     const started = Date.now();
+    // 开始到开始：检查本身的耗时不再叠加到间隔上
+    for (const region of due) {
+      const intervalMs = intervalMsOf(region);
+      dueAt[region] = nextDueAt(started, intervalMs, pollJitterMs(intervalMs));
+    }
+
     try {
       const mt = settingsMtime();
       if (mt !== lastSettingsMtime) {
@@ -297,12 +342,27 @@ async function run() {
       const checkClient = client;
       const checkCfg = cfg;
       const mailErrors = new Set();
-      await checkClient.checkAvailability({ onUpdate: async (results) => {
+      await checkClient.checkAvailability({ only: due, onUpdate: async (results) => {
         // 设置变更后的旧查询不能更新状态或发送通知。
         if (checkCfg !== cfg) return;
         status.results = asStatus(results);
         status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
-        log('#' + cycle + ' 地区结果更新 (' + (Date.now() - started) + 'ms)\n' + render(results));
+        // 香港每 5 秒一轮、大陆 60 秒一轮时，没轮到的地区会在「等待下一轮」和
+        // 真实结果之间来回跳。所以指纹按「地区」记：pending 的地区沿用上一次的
+        // 数据，只有某个地区的库存真的变了才打印完整结果。
+        for (const row of results) {
+          for (const [reg, d] of Object.entries(row.perRegion || {})) {
+            if (d.pending) continue;
+            regionPrint[row.key + '|' + reg] = JSON.stringify([d.ok, d.stores, d.error]);
+          }
+        }
+        const fingerprint = Object.keys(regionPrint).sort().map((k) => k + '=' + regionPrint[k]).join(';');
+        if (fingerprint === lastFingerprint) {
+          log('#' + cycle + ' 无变化 [' + due.join('+') + '] (' + (Date.now() - started) + 'ms)');
+        } else {
+          lastFingerprint = fingerprint;
+          log('#' + cycle + ' 地区结果更新 [' + due.join('+') + '] (' + (Date.now() - started) + 'ms)\n' + render(results));
+        }
         const errors = await deliverAlerts(results, state, checkCfg, {
           persist, dryRun, log,
           send: async (mail) => {
@@ -327,11 +387,6 @@ async function run() {
       log(`#${cycle} ❌ 本轮检查失败: ${e.message}`);
       status.lastError = e.message;
     }
-
-    if (stopping) break;
-    // 加一点随机抖动，避免被 Apple 判定为机器人固定节奏
-    const jitter = Math.floor(Math.random() * 5000);
-    await sleep(cfg.intervalSeconds * 1000 + jitter);
   }
 }
 

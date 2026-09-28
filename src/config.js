@@ -124,6 +124,7 @@ export function loadConfig() {
 
     // ---- 监控行为 ----
     intervalSeconds: settings.pollIntervalSeconds,
+    hkIntervalSeconds: settings.hkIntervalSeconds,
     priorityOnly: settings.priorityOnly,
     soldOutNotify: settings.soldOutNotify,
     repeatAlertMinutes: settings.repeatAlertMinutes,

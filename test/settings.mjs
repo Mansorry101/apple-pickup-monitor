@@ -120,12 +120,21 @@ console.log('\n=== 监控门店列表清洗 ===');
 
 console.log('\n=== 数值范围钳制 ===');
 {
-  assert.equal(normalizeSettings({ pollIntervalSeconds: 1 }).pollIntervalSeconds, 30, '轮询间隔过低应被抬到 30');
+  assert.equal(normalizeSettings({ pollIntervalSeconds: 1 }).pollIntervalSeconds, 15, '轮询间隔过低应被抬到 15');
   assert.equal(normalizeSettings({ pollIntervalSeconds: 999999 }).pollIntervalSeconds, 86400);
   assert.equal(normalizeSettings({ repeatAlertMinutes: -5 }).repeatAlertMinutes, 0);
   assert.equal(normalizeSettings({ uiPort: 80 }).uiPort, 1024)
   assert.equal(normalizeSettings({ pollIntervalSeconds: 'abc' }).pollIntervalSeconds, 60);
-  console.log('  ✓ 轮询间隔 / 重复提醒 / 端口 都被正确钳制');
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 1 }).hkIntervalSeconds, 3, '香港间隔过低应被抬到 3');
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 5 }).hkIntervalSeconds, 5);
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 999999 }).hkIntervalSeconds, 86400);
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 'abc' }).hkIntervalSeconds, 5, '香港间隔缺省应为 5 秒');
+  assert.equal(normalizeSettings({}).hkIntervalSeconds, 5, '没配置时香港间隔默认 5 秒，保证香港查得够勤');
+  // 香港间隔独立于大陆间隔，互不影响
+  const both = normalizeSettings({ pollIntervalSeconds: 120, hkIntervalSeconds: 5 });
+  assert.equal(both.pollIntervalSeconds, 120);
+  assert.equal(both.hkIntervalSeconds, 5);
+  console.log('  ✓ 轮询间隔 / 香港间隔 / 重复提醒 / 端口 都被正确钳制');
 }
 
 console.log('\n=== 目录补全（多地区）===');

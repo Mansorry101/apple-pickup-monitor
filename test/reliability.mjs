@@ -130,7 +130,7 @@ test('哨兵正常但目标缺失，不能被判成无货',async()=>{
 });
 
 test('每批都带哨兵：第二批缺失或哨兵异常不能通过校验',async()=>{
-  const products=Array.from({length:9},(_,i)=>({...product,key:'P'+i,parts:{HK:'TEST'+i+'ZP/A'}}));
+  const products=Array.from({length:12},(_,i)=>({...product,key:'P'+i,parts:{HK:'TEST'+i+'ZP/A'}}));
   for(const mode of ['missing','canary']) {
     const {client,s}=mockSession(products);let batch=0;
     s.queryParts=async(parts)=>{assert.ok(parts.includes(REGIONS.HK.canaryPart));batch++;
@@ -156,18 +156,16 @@ test('发信成功但写盘失败时，内存仍保留待发送事件',async()=>
   assert.equal(errors.length,1);assert.ok(state.parts.P.pending);assert.equal(state.parts.P.lastAlertAt,undefined);
 });
 
-test('前次失败的城市和送达日期不能混入重试结果',async()=>{
+test('独立城市会话的空库存不会混入送达日期',async()=>{
   const client=new ApplePickupClient({...cfg,watchRegions:['CN'],watchStores:['R401','R320'],maxRetries:2},()=>{});
-  const s=client.session('CN');let attempt=0,city;
-  s.ensureSession=async()=>{attempt++;s.ready=true;s.createdAt=Date.now();s.warmedKey=null;};
-  s.setLocation=async(value)=>{city=value.city;};s.warmUp=async()=>true;
-  s.queryParts=async(parts)=>{
-    if(attempt===1 && city==='北京')throw new Error('Beijing timeout');
-    return parts.map(p=>({...item(p,attempt===1?1:0),
-      ...(attempt===1?{deliveryMessage:{deliveryOptions:[{date:'OLD-DATE'}]}}:{})}));
-  };
+  for (const city of ['CN:上海', 'CN:北京']) {
+    const s=client.session('CN', city);
+    s.ready=true;s.createdAt=Date.now();s.warmedKey=city;
+    s.setLocation=async()=>{};s.warmUp=async()=>true;
+    s.queryParts=async(parts)=>parts.map(p=>({...item(p,0)}));
+  }
   const data=await client.checkRegion('CN',[product]);
-  assert.equal(attempt,2);assert.deepEqual(data.P.stores,[]);assert.equal(data.P.deliveryDate,null);
+  assert.deepEqual(data.P.stores,[]);assert.equal(data.P.deliveryDate,null);
 });
 
 test('响应结构缺失及矛盾库存不能转换为无货',async()=>{
@@ -181,6 +179,89 @@ test('响应结构缺失及矛盾库存不能转换为无货',async()=>{
     const {client,s}=mockSession();s.queryParts=async(parts)=>parts.map(p=>p===REGIONS.HK.canaryPart?item(p,1):({...item(p),...invalid}));
     assert.equal((await client.checkAvailability())[0].availability,'unknown');
   }
+});
+
+test('大陆城市会话按地区和城市隔离，并在后续轮询复用已热身会话',async()=>{
+  const client=new ApplePickupClient({...cfg,watchStores:['R401','R320']},()=>{});
+  const sh=client.session('CN','CN:上海'),bj=client.session('CN','CN:北京');
+  assert.notEqual(sh,bj);
+  let warmups=0,queries=0;
+  for(const session of [sh,bj]) {
+    session.ready=true;session.createdAt=Date.now();session.locationKey=null;
+    session.setLocation=async(city)=>{session.locationKey=city.key;};
+    session.warmUp=async()=>{warmups++;return true;};
+    session.queryParts=async(parts)=>{queries++;return parts.map(p=>({...item(p,0),storeId:'R401'}));};
+  }
+  await client.checkRegion('CN',[product]);
+  await client.checkRegion('CN',[product]);
+  assert.equal(warmups,2);assert.equal(queries,4);
+  assert.equal(client.session('CN','CN:上海'),sh);assert.equal(client.session('CN','CN:北京'),bj);
+});
+
+test('各地区按自己的到期时间调度：香港 5 秒、大陆 60 秒互不影响',async()=>{
+  const { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs } = await import('../src/scheduler.js');
+  const t0=1_000_000;
+  // 开始到开始：到期时间从「这一轮开始」算，检查本身的耗时不算进去
+  const dueAt={HK:nextDueAt(t0,5_000),CN:nextDueAt(t0,60_000)};
+  assert.equal(dueAt.HK-t0,5_000);
+  assert.deepEqual(dueRegions(dueAt,['HK','CN'],t0+4_000),[],'都还没到点');
+  assert.deepEqual(dueRegions(dueAt,['HK','CN'],t0+5_000),['HK'],'只有香港到点');
+  assert.deepEqual(dueRegions(dueAt,['HK','CN'],t0+60_000),['HK','CN']);
+  assert.equal(msUntilNextDue(dueAt,['HK','CN'],t0+1_000),4_000);
+  // 抖动只让下一轮提前，绝不推后：5 秒的间隔永远在 4–5 秒之间到点
+  for (const j of [0,300,999,1_000]) {
+    assert.ok(nextDueAt(t0,5_000,j)<=t0+5_000,`抖动 ${j} 不该把香港的下一轮推到 5 秒之后`);
+    assert.ok(nextDueAt(t0,5_000,j)>=t0+4_000);
+  }
+  assert.equal(nextDueAt(t0,5_000,99_999),t0,'抖动再大也不会算成负数');
+  assert.ok(pollJitterMs(5_000,()=>0.999)<=1_000);
+  assert.ok(pollJitterMs(3_000,()=>0.999)<=600,'抖动不超过间隔的 20%');
+  // 从未查过的地区视为立即到期；没有地区时不至于算出负数
+  assert.deepEqual(dueRegions({},['HK'],t0),['HK']);
+  assert.equal(msUntilNextDue({},[],t0),0);
+});
+
+test('只查香港的那一轮不碰大陆会话，大陆标成「等待下一轮」而不是失败',async()=>{
+  const client=new ApplePickupClient(cfg,()=>{});
+  const seen=[];
+  client.checkRegion=async(region)=>{seen.push(region);return regional(region,[]);};
+  const rows=await client.checkAvailability({only:['HK']});
+  assert.deepEqual(seen,['HK'],'这一轮只该查香港');
+  assert.equal(rows[0].perRegion.HK.ok,true);
+  assert.equal(rows[0].perRegion.CN.pending,true,'大陆本轮没查 → pending');
+  assert.equal(rows[0].complete,false,'大陆没查过，不能算完整结果');
+  assert.equal(rows[0].availability,'unknown','不完整时不能宣称无货');
+});
+
+test('大陆没轮到的那些轮次，不会因为香港没货就发出「售罄」邮件',async()=>{
+  const state={parts:{}};
+  // 第一轮：两地都查过，优先门店（香港 R499）有货 → 发过一封有货邮件
+  const both={...result(['R499']),perRegion:{
+    HK:{partNumber:product.parts.HK,stores:['R499'],ok:true},
+    CN:{partNumber:product.parts.CN,stores:['R401'],ok:true}}};
+  acknowledgeAlerts(planItems(decideAlerts([both],state,cfg)),state);
+  assert.equal(state.parts.P.role,'priority');
+  // 第二轮：只轮到香港，香港这轮没货；大陆没查过
+  const hkOnly={...result([],{complete:false}),perRegion:{
+    HK:{partNumber:product.parts.HK,stores:[],ok:true},
+    CN:{partNumber:product.parts.CN,stores:[],ok:false,pending:true,error:'本轮未查询'}}};
+  assert.equal(hkOnly.complete,false,'只查一个地区时结果不完整');
+  const plan=decideAlerts([hkOnly],state,cfg);
+  assert.equal(planItems(plan).length,0,'拿不到大陆新数据时不能下「售罄」结论');
+  assert.equal(state.parts.P.role,'priority','旧观测应当原样保留');
+});
+
+test('库存没变化时不重复写盘（香港每 5 秒一轮也不会狂写状态文件）',async()=>{
+  const state={parts:{}};
+  let writes=0;
+  const persist=()=>{writes++;};
+  const send=async()=>({accepted:['test@example.invalid']});
+  await deliverAlerts([result(['R499'])],state,cfg,{persist,send});
+  assert.equal(writes,2,'首次有货：发送前 + 确认后各写一次');
+  await deliverAlerts([result(['R499'])],state,cfg,{persist,send});
+  assert.equal(writes,2,'库存没变化 → 不写盘');
+  await deliverAlerts([result([])],state,cfg,{persist,send});
+  assert.ok(writes>2,'库存消失属于状态变化，应当写盘');
 });
 
 // 门店地区决定版本，目录与保存目标保留完整映射。
@@ -214,7 +295,8 @@ test('实际查询批次只使用门店地区的料号与哨兵，不受过期wa
     const client=new ApplePickupClient({...cfg,watchStores:stores,watchRegions:['HK','CN']},()=>{});
     const requests=[];
     for(const region of regions) {
-      const s=client.session(region);s.ready=true;s.createdAt=Date.now();s.warmedKey='';
+      const cityKey = region === 'CN' ? 'CN:上海' : '';
+      const s=client.session(region, cityKey);s.ready=true;s.createdAt=Date.now();s.warmedKey=cityKey;
       s.setLocation=async()=>{};s.warmUp=async()=>true;
       s.queryParts=async(parts,store)=>{
         requests.push(region);

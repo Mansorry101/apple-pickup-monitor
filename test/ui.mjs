@@ -198,5 +198,17 @@ const mo = JSON.parse(await evaluate(PROBE));
 assert.equal(mo['w-store'].disabled, true, '澳门没有网上商店，门店下拉应当被禁用');
 console.log('  ✓ 选到澳门时门店下拉被正确禁用');
 
+// 香港可以单独设一个更短的间隔（默认 5 秒），输入框必须被填上值
+const intervals = JSON.parse(await evaluate(`JSON.stringify((function(){
+  var cn = document.getElementById('interval'), hk = document.getElementById('hk-interval');
+  return { cn: cn ? cn.value : null, hk: hk ? hk.value : null,
+           hkMin: hk ? hk.getAttribute('min') : null };
+})())`));
+assert.ok(intervals.cn, '大陆轮询间隔输入框应当有值');
+assert.ok(intervals.hk, '香港监控间隔输入框应当有值');
+assert.ok(Number(intervals.hk) >= 3 && Number(intervals.hk) <= 60,
+  `香港间隔应当是 3–60 秒的合理值，实际 ${intervals.hk}`);
+console.log(`  ✓ 轮询间隔输入框已填值：大陆 ${intervals.cn} 秒 / 香港 ${intervals.hk} 秒（min=${intervals.hkMin}）`);
+
 console.log('\n✅ 界面渲染测试通过');
 cleanup();

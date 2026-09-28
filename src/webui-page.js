@@ -125,8 +125,12 @@ export const PAGE = `<!doctype html>
   <div class="card">
     <h2>5. 监控行为</h2>
     <div class="row">
-      <div><label>轮询间隔</label><div class="d">多久查一次库存，建议 60 秒（最低 30 秒）</div></div>
-      <div><input type="number" id="interval" min="30" max="3600"> 秒</div>
+      <div><label>轮询间隔</label><div class="d">每轮开始之间的间隔（最低 15 秒）</div></div>
+      <div><input type="number" id="interval" min="15" max="3600"> 秒</div>
+    </div>
+    <div class="row">
+      <div><label>香港监控间隔</label><div class="d">只对香港生效：香港不用定位、一次请求就出结果，可以查得更勤（最低 3 秒）</div></div>
+      <div><input type="number" id="hk-interval" min="3" max="3600"> 秒</div>
     </div>
     <div class="row">
       <div><label>只有优先门店有货才通知</label><div class="d">开启后，其他门店有货不再发「备选」邮件</div></div>
@@ -464,6 +468,7 @@ export const PAGE = `<!doctype html>
   function renderSettings() {
     var s = settings();
     el('interval').value = s.pollIntervalSeconds;
+    el('hk-interval').value = s.hkIntervalSeconds != null ? s.hkIntervalSeconds : 5;
     el('priorityOnly').checked = !!s.priorityOnly;
     el('repeat').value = s.repeatAlertMinutes;
     el('soldOut').checked = s.soldOutNotify !== false;
@@ -534,10 +539,14 @@ export const PAGE = `<!doctype html>
         var d = r.perRegion[reg];
         var local = (r.stores || []).filter(function (id) { var s = storeById(id); return s && s.region === reg; });
         var names = local.map(function (id) { var s = storeById(id); return s.city + ' · ' + s.name; });
-        return '<div>' + esc(regionShort(reg) + '版本 · ' + d.partNumber + ' → ' +
-          (d.ok === false ? '库存未知（查询未完成或失败）' : names.join('、') || '无门店有货')) + '</div>';
+        var text = d.ok === false
+          ? (d.pending ? '等待下一轮查询（各地区间隔不同）' : '库存未知（查询未完成或失败）')
+          : (names.join('、') || '无门店有货');
+        return '<div>' + esc(regionShort(reg) + '版本 · ' + d.partNumber + ' → ' + text) + '</div>';
       }).join('');
-      var badge = (r.atPriority ? ' ✅ 优先门店有货' : '') + (r.complete === false ? ' · 部分地区数据未知' : '');
+      var pending = Object.keys(r.perRegion || {}).some(function (reg) { return r.perRegion[reg].pending; });
+      var badge = (r.atPriority ? ' ✅ 优先门店有货' : '') +
+        (pending ? ' · 部分地区等待下一轮' : r.complete === false ? ' · 部分地区数据未知' : '');
       var other = (r.otherStores && r.otherStores.length) ? '（附近另有 ' + r.otherStores.length + ' 家未监控门店有货）' : '';
       return '<div class="res"><div>' + esc(r.name) +
         '<div class="meta" style="color:#86868b;font-size:11.5px">' + esc(parts.join(' / ')) + '</div></div>' +
@@ -588,6 +597,7 @@ export const PAGE = `<!doctype html>
       uiPort: settings().uiPort,
       watchStores: watch,
       pollIntervalSeconds: Number(el('interval').value),
+      hkIntervalSeconds: Number(el('hk-interval').value),
       priorityOnly: el('priorityOnly').checked,
       repeatAlertMinutes: Number(el('repeat').value),
       soldOutNotify: el('soldOut').checked,
