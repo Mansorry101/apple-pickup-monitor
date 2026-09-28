@@ -1,9 +1,3 @@
-/**
- * 告警状态机 + 邮件渲染测试（纯逻辑，不打网络）。
- * 网络部分见 test/live.mjs。
- *
- * 运行： node test/positive-path.mjs
- */
 import assert from 'node:assert';
 import { loadConfig } from '../src/config.js';
 import { storeLabel } from '../src/apple.js';
@@ -70,7 +64,6 @@ console.log('=== 1. 告警状态机（优先门店 = ' + cfg.priorityStore + '�
   assert.equal(a.soldOut.length, 0);
   console.log('  ✓ 一直没有货 → 不发任何邮件');
 
-  // 多地区目标：状态按 key 隔离，不会互相污染
   const st6 = { parts: {} };
   decideAlerts([mk('A', []), mk('B', [P])], st6, cfg);
   assert.equal(st6.parts.A.role, 'none');
@@ -104,7 +97,6 @@ console.log('\n=== 2. 邮件渲染 ===');
   assert.ok(s.subject.includes('库存已消失'));
   console.log(`  ✓ 收尾邮件: ${s.subject}`);
 
-  // 多机型共用前缀应折叠（避免 "512GB 512GB"）
   const two = [
     { product: { name: 'iPhone 18 Pro Max 512GB 银色' }, parts: { HK: 'A' }, stores: ['R499'] },
     { product: { name: 'iPhone 18 Pro Max 512GB 黑色' }, parts: { HK: 'B' }, stores: ['R499'] },

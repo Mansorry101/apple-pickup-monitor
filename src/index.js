@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Apple Store 门市取货监控 —— 主程序
- * 支持中国大陆 / 香港全部 Apple Store。
- *
- *   node src/index.js              持续监控（默认每 60 秒）
- *   node src/index.js --once       只查一次，打印结果，不发邮件
- *   node src/index.js --test-email 发一封测试邮件，验证邮箱配置
- */
 import fs from 'node:fs';
 import { loadConfig, validateMail, REGIONS, STORE_BY_ID } from './config.js';
 import { ApplePickupClient, storeLabel } from './apple.js';
@@ -25,9 +17,6 @@ const has = (f) => argv.includes(f);
 
 let cfg = loadConfig();
 
-// ---------- 统一输出 ----------
-// 后台运行时没有控制台窗口，stdout 会被丢弃。这里把 console 的所有输出
-// 同时写入日志文件，保证「一键部署」后出问题时有据可查。
 const LOG_TO_FILE = !has('--once') && !has('--help') && Boolean(cfg.logFile);
 for (const level of ['log', 'error', 'warn']) {
   const orig = console[level].bind(console);
@@ -37,7 +26,7 @@ for (const level of ['log', 'error', 'warn']) {
       .join(' ');
     orig(line);
     if (LOG_TO_FILE) {
-      try { fs.appendFileSync(cfg.logFile, line + '\n', 'utf8'); } catch { /* 写日志失败不影响监控 */ }
+      try { fs.appendFileSync(cfg.logFile, line + '\n', 'utf8'); } catch {}
     }
   };
 }
@@ -48,7 +37,6 @@ function log(...args) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 某个地区该用什么门店标签 */
 const rshort = (r) => REGIONS[r]?.short || r;
 
 function banner(extra = '') {
@@ -73,7 +61,6 @@ function banner(extra = '') {
   console.log('='.repeat(68));
 }
 
-/** 影响会话的配置指纹：目标机型 / 门店变了就要重建客户端 */
 const clientSignature = (c) =>
   JSON.stringify([
     c.products.map((p) => [p.key, p.parts]),
@@ -101,18 +88,15 @@ function render(results) {
 }
 
 function queryErrors(results) {
-  // pending = 本轮没轮到这个地区（各自间隔不同），不是错误
   return [...new Set(results.flatMap((r) => Object.entries(r.perRegion || {})
     .filter(([, d]) => d.ok === false && !d.pending).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
 }
 
-/** 模拟测试用的"确实有货"配件（按地区给不同的料号） */
 const SIM_POOL = {
   HK: ['MH3D4ZP/A', 'MH3E4ZP/A', 'MH354ZP/A', 'MH334ZP/A', 'MH374ZP/A', 'MH344ZP/A'],
   CN: ['MH3A4CH/A', 'MH3G4CH/A', 'MH304CH/A', 'MH354CH/A', 'MH3D4CH/A', 'MH3J4CH/A'],
 };
 
-// ---------- 主循环 ----------
 async function run() {
   const dryRun = has('--dry-run');
   const uiOnly = has('--ui-only');
@@ -191,14 +175,11 @@ async function run() {
   let client = new ApplePickupClient(cfg, log);
   let clientSig = clientSignature(cfg);
 
-  // 各地区「下次该查的时间」：香港不需要定位、一次请求就有结果，
-  // 用 hkIntervalSeconds 单独调度，大陆仍按 pollIntervalSeconds 走。
   const dueAt = {};
 
   function reload(why = '配置变更') {
     cfg = loadConfig();
     const sig = clientSignature(cfg);
-    // 间隔可能刚被改小（比如香港从 60 秒改成 5 秒），清掉旧的到期时间才能立刻生效
     for (const key of Object.keys(dueAt)) delete dueAt[key];
     if (sig !== clientSig) {
       client = new ApplePickupClient(cfg, log);
@@ -304,7 +285,6 @@ async function run() {
     const active = client.activeRegions();
 
     if (!active.length) {
-      // 没有可查询的地区：跑一次检查把原因打出来，再按普通间隔等下一轮
       cycle++;
       const started = Date.now();
       try {
@@ -319,14 +299,12 @@ async function run() {
 
     const due = dueRegions(dueAt, active, Date.now());
     if (!due.length) {
-      // 还没轮到任何地区：睡到最近一个地区到期
       await sleep(msUntilNextDue(dueAt, active, Date.now()));
       continue;
     }
 
     cycle++;
     const started = Date.now();
-    // 开始到开始：检查本身的耗时不再叠加到间隔上
     for (const region of due) {
       const intervalMs = intervalMsOf(region);
       dueAt[region] = nextDueAt(started, intervalMs, pollJitterMs(intervalMs));
@@ -343,13 +321,9 @@ async function run() {
       const checkCfg = cfg;
       const mailErrors = new Set();
       await checkClient.checkAvailability({ only: due, onUpdate: async (results) => {
-        // 设置变更后的旧查询不能更新状态或发送通知。
         if (checkCfg !== cfg) return;
         status.results = asStatus(results);
         status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
-        // 香港每 5 秒一轮、大陆 60 秒一轮时，没轮到的地区会在「等待下一轮」和
-        // 真实结果之间来回跳。所以指纹按「地区」记：pending 的地区沿用上一次的
-        // 数据，只有某个地区的库存真的变了才打印完整结果。
         for (const row of results) {
           for (const [reg, d] of Object.entries(row.perRegion || {})) {
             if (d.pending) continue;
@@ -374,7 +348,6 @@ async function run() {
               setMailStatus(true);
               return info;
             } catch (e) {
-              // 发信失败要反映到界面状态，否则邮箱坏了会被"监控中"掩盖。
               setMailStatus(false, e.message);
               throw e;
             }
@@ -390,7 +363,6 @@ async function run() {
   }
 }
 
-// ---------- 模拟测试：用"确实有货"的配件走一遍完整告警流程 ----------
 async function simulate() {
   const errs = validateMail(cfg);
   if (errs.length) {

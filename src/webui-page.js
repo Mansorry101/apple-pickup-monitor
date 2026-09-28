@@ -1,9 +1,3 @@
-/**
- * 设置界面的 HTML（单页，无外部依赖、无 CDN，离线可用）。
- * 客户端 JS 刻意不用模板字符串，避免与外层模板字面量冲突。
- *
- * 交互：全部走下拉框 —— 先选城市，再选门店；机型 → 容量 → 颜色。
- */
 export const PAGE = `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -207,7 +201,6 @@ export const PAGE = `<!doctype html>
     });
   }
 
-  // ---------- 数据访问 ----------
   function dir() { return state.boot.directory || { regions: [], cities: [], stores: [] }; }
   function cat() { return state.boot.catalog || { families: [], variants: [] }; }
   function settings() { return state.boot.settings; }
@@ -265,7 +258,6 @@ export const PAGE = `<!doctype html>
   }
   function variantName(v) { return v ? (v.family + ' ' + v.capacity + ' ' + (v.colorZh || v.color)) : ''; }
 
-  // ---------- 城市 / 门店下拉 ----------
   function cityOptgroups() {
     var regions = dir().regions || [];
     var cities = dir().cities || [];
@@ -305,20 +297,15 @@ export const PAGE = `<!doctype html>
     return searchable;
   }
 
-  // ---------- 渲染：监控门店选择器 ----------
-  // 注意：这一对下拉框必须单独初始化。之前漏了，导致「同时监控的门店」
-  // 里的城市/门店是空的 <select>，点开什么都不显示。
   function renderWatchPicker() {
     var pri = el('p-store').value || settings().priorityStore;
     var s = storeById(pri);
     var cur = el('w-city').value;
-    // 默认和优先门店同一个城市（多数人想在同城再加一家）；否则用第一个城市
     var prefer = (cur && cityByKey(cur)) ? cur : (s ? cityKeyOfStore(s) : ((dir().cities || [])[0] || {}).key);
     fillCitySelect(el('w-city'), prefer);
     fillStoreSelect(el('w-store'), el('w-city').value);
   }
 
-  // ---------- 渲染：优先门店 ----------
   function renderPriority() {
     var id = settings().priorityStore;
     var s = storeById(id);
@@ -340,7 +327,6 @@ export const PAGE = `<!doctype html>
     el('p-addr').textContent = s.province + ' ' + s.city + ' · ' + s.address + (s.phone ? ' · ' + s.phone : '');
   }
 
-  // ---------- 渲染：监控门店列表 ----------
   function renderWatch() {
     var pri = el('p-store').value || settings().priorityStore;
     el('w-list').innerHTML = settings().watchStores.map(function (id) {
@@ -368,7 +354,6 @@ export const PAGE = `<!doctype html>
     }
   }
 
-  // ---------- 渲染：机型下拉 ----------
   function fillFamilySelect() {
     var fams = cat().families || [];
     var sel = el('m-family');
@@ -420,7 +405,6 @@ export const PAGE = `<!doctype html>
     fillFamilySelect(); fillCapSelect(); fillColorSelect();
   }
 
-  // ---------- 渲染：已选目标 ----------
   function renderTargets() {
     var ts = settings().targets || [];
     if (!ts.length) {
@@ -622,7 +606,6 @@ export const PAGE = `<!doctype html>
     });
   }
 
-  // ---------- 启动 ----------
   function init() {
     return api('/api/bootstrap').then(function (b) {
       state.boot = b;

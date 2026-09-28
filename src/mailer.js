@@ -1,7 +1,3 @@
-/**
- * 邮件通知（QQ邮箱 SMTP / 任意 SMTP）。
- * 支持多地区：同一款机型在大陆/香港料号不同，邮件里会一并列出。
- */
 import nodemailer from 'nodemailer';
 import { storeLabel, STORE_BY_ID, REGIONS } from './stores.js';
 
@@ -9,7 +5,7 @@ export function createTransport(cfg) {
   return nodemailer.createTransport({
     host: cfg.mail.host,
     port: cfg.mail.port,
-    secure: cfg.mail.secure, // 465 用 true；587 用 false
+    secure: cfg.mail.secure,
     auth: { user: cfg.mail.user, pass: cfg.mail.pass },
     connectionTimeout: 20_000,
     greetingTimeout: 20_000,
@@ -28,7 +24,6 @@ const cnTime = (d = new Date()) =>
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-/** 把多个机型名合成简短标签：共用前缀只显示一次（避免"512GB 512GB"这种重复） */
 export function namesLabel(items) {
   const names = items.map((i) => i.product.name).filter(Boolean);
   if (!names.length) return '';
@@ -42,13 +37,11 @@ export function namesLabel(items) {
   return tails.length ? `${prefix} ${tails.join(' / ')}` : prefix;
 }
 
-/** 料号按地区列出来 */
 const partsLabel = (it) =>
   Object.entries(it.parts || {})
     .map(([r, pn]) => `${REGIONS[r]?.short || r} ${pn}`)
     .join(' / ');
 
-/** 优先用有货地区的购买链接 */
 function bestLink(it) {
   const urls = it.product.buyUrls || {};
   const order = [
@@ -122,7 +115,6 @@ function shell(title, color, subtitle, items, footerNote) {
   </div></body></html>`;
 }
 
-/** 优先门店有货 */
 export function buildPriorityMail(items, cfg) {
   items = regionalMailItems(items);
   const p = cfg.priorityStoreInfo || {};
@@ -146,7 +138,6 @@ export function buildPriorityMail(items, cfg) {
   };
 }
 
-/** 其他被监控的门店有货 */
 export function buildReferenceMail(items, cfg) {
   items = regionalMailItems(items);
   const p = cfg.priorityStoreInfo || {};

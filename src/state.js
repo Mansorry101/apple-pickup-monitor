@@ -1,6 +1,3 @@
-/**
- * 状态持久化：避免重启后重复发邮件，并支持"库存消失"通知。
- */
 import fs from 'node:fs';
 import path from 'node:path';
 

@@ -1,11 +1,3 @@
-/**
- * 本地网页设置界面（只用 node 内置 http，无第三方依赖）。
- *
- *   http://127.0.0.1:8787
- *
- * 只监听回环地址，外部网络访问不到。
- * 可以：选城市 → 选门店 / 选机型-容量-颜色 / 调轮询行为 / 立即检查 / 发测试邮件 / 看日志。
- */
 import http from 'node:http';
 import fs from 'node:fs';
 import { REGIONS, REGION_ORDER, CITIES, STORES, STORE_BY_ID } from './stores.js';
@@ -43,7 +35,6 @@ function tailLog(file, lines) {
   }
 }
 
-/** 给界面用的地区 + 城市 + 门店目录 */
 function directoryPayload() {
   return {
     regions: REGION_ORDER.map((id) => ({
@@ -114,7 +105,6 @@ export function startWebUi(ctx, log = console.log) {
       if (route === 'POST /api/settings') {
         const body = await readBody(req);
         const catalog = loadCatalogCache(CATALOG_CACHE);
-        // 保存前用目录补全机型名称与直达链接，让 config.json 本身可读
         if (Array.isArray(body.targets)) body.targets = enrichTargets(body.targets, catalog);
         const saved = saveSettings(body);
         ctx.reload('设置已更新');

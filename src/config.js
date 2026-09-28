@@ -1,11 +1,3 @@
-/**
- * 配置加载：
- *   .env        → 邮箱凭据 + 少量高级参数（敏感，设置界面不碰）
- *   config.json → 优先门店 / 监控门店 / 监控机型 / 轮询行为（由网页设置界面读写）
- *
- * 这里把「用户设置」+「机型目录缓存」+「门店静态目录」拼成一个运行时 cfg，
- * 业务代码只认 cfg，不关心数据来自哪里。
- */
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './constants.js';
@@ -15,7 +7,6 @@ import { loadCatalogCache, findVariantByKey, findVariant, FAMILY_SLUGS } from '.
 
 export { ROOT, STORES, STORE_BY_ID, REGIONS, SEARCHABLE_REGIONS };
 
-/** 极简 .env 解析器：支持 KEY=VALUE、# 注释、带引号的值 */
 function parseEnv(text) {
   const out = {};
   for (const rawLine of text.split(/\r?\n/)) {
@@ -36,7 +27,6 @@ function parseEnv(text) {
 export function loadEnvFile(file = path.join(ROOT, '.env')) {
   try {
     const parsed = parseEnv(fs.readFileSync(file, 'utf8'));
-    // 真实环境变量优先，方便 Docker / CI 注入
     for (const [k, v] of Object.entries(parsed)) {
       if (process.env[k] === undefined) process.env[k] = v;
     }
@@ -61,7 +51,6 @@ export function loadConfig() {
   const settings = loadSettings();
   const catalog = loadCatalogCache(CATALOG_CACHE);
 
-  // 用机型目录补全「两地料号 + 直达链接 + 价格」（没有缓存时退回 settings 里存的料号）
   const products = scopeProductsByStores(settings.targets.map((t) => {
     const v = t.key ? findVariantByKey(catalog, t.key) : null;
     const fallback = v || findVariant(catalog, Object.values(t.parts || {})[0]);
@@ -77,7 +66,6 @@ export function loadConfig() {
       prices: fallback?.prices || {},
       parts,
       buyUrls,
-      // 兼容旧字段：优先地区的料号 / 链接
       partNumber: undefined,
     };
   }), settings.watchStores);
@@ -85,7 +73,6 @@ export function loadConfig() {
   const watchStores = settings.watchStores.filter((id) => STORE_BY_ID[id]);
   const watchRegions = regionsOfStores(watchStores);
 
-  // 每个地区挑一个「触发用」门店（接口要求带 store 参数，否则部分地区不返回数据）
   const priorityStoreFor = {};
   const defaultStoreFor = {};
   for (const r of SEARCHABLE_REGIONS) {
@@ -96,7 +83,6 @@ export function loadConfig() {
     defaultStoreFor[r] = STORES.find((s) => s.region === r)?.id || '';
   }
 
-  // 建会话时要访问的商品页：优先用监控机型的直达页，其次机型主页
   const sessionPages = {};
   for (const r of SEARCHABLE_REGIONS) {
     const pages = products.map((p) => p.buyUrls?.[r]).filter(Boolean);
@@ -111,7 +97,6 @@ export function loadConfig() {
     settings,
     catalog,
 
-    // ---- 门店 ----
     priorityStore: settings.priorityStore,
     priorityStoreInfo: STORE_BY_ID[settings.priorityStore] || null,
     priorityStoreRegion: STORE_BY_ID[settings.priorityStore]?.region || null,
@@ -122,7 +107,6 @@ export function loadConfig() {
     defaultStoreFor,
     sessionPages,
 
-    // ---- 监控行为 ----
     intervalSeconds: settings.pollIntervalSeconds,
     hkIntervalSeconds: settings.hkIntervalSeconds,
     priorityOnly: settings.priorityOnly,
@@ -132,7 +116,6 @@ export function loadConfig() {
     products,
     catalogCache: CATALOG_CACHE,
 
-    // ---- 高级参数（.env 可覆盖）----
     requestTimeoutMs: num(env.REQUEST_TIMEOUT_MS, 25000),
     maxRetries: num(env.MAX_RETRIES, 6),
     sessionRefreshMinutes: num(env.SESSION_REFRESH_MINUTES, 30),
@@ -157,7 +140,6 @@ export function loadConfig() {
   };
 }
 
-/** 校验发信配置，返回错误信息数组 */
 export function validateMail(cfg) {
   const errs = [];
   if (!cfg.mail.host) errs.push('SMTP_HOST 未填写');

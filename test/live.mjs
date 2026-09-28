@@ -1,13 +1,3 @@
-/**
- * 多地区「有货识别」实测（需要联网）。
- *
- * 用长期有门店库存的 iPad Air 当靶子，验证真实链路真的能识别到有货：
- *   1. 大陆：必须先提交定位，且返回的门店要能与"监控门店"正确求交集
- *   2. 香港：不需要定位，直接返回全港有货门店
- *   3. 优先门店判定（atPriority）正确
- *
- * 运行： node test/live.mjs
- */
 import assert from 'node:assert';
 import { loadConfig } from '../src/config.js';
 import { ApplePickupClient } from '../src/apple.js';
@@ -51,7 +41,6 @@ const hk = results.find((r) => r.key === 'iPad Air|512GB|HK');
 assert.ok(cn.ok, '大陆查询应成功');
 assert.ok(hk.ok, '香港查询应成功');
 
-// 大陆：定位到上海后，Apple 会返回"上海及周边"有货门店
 assert.ok(
   cn.stores.length > 0,
   '大陆 iPad Air 应至少命中一家监控中的门店（若为 0，多半是定位或会话出了问题）',
@@ -62,17 +51,14 @@ assert.ok(
 );
 console.log(`\n  ✓ 大陆：命中 ${cn.stores.length} 家监控门店`);
 
-// 香港：6 家全在监控范围内
 assert.ok(hk.stores.length > 0, '香港 iPad Air 应至少命中一家监控中的门店');
 assert.ok(hk.stores.every((s) => HK_ALL.includes(s)), '香港结果里不应出现非监控门店');
 console.log(`  ✓ 香港：命中 ${hk.stores.length} 家监控门店`);
 
-// 优先门店判定
 assert.equal(cn.atPriority, cn.stores.includes('R401'), 'atPriority 应与优先门店是否命中一致');
 assert.equal(hk.atPriority, hk.stores.includes('R401'), '香港结果不应把大陆门店算成优先门店');
 console.log('  ✓ atPriority 判定正确（香港结果不会误判大陆优先门店）');
 
-// 跨地区串味检查：大陆的料号不应该出现在香港结果里
 assert.ok(!Object.keys(hk.perRegion).includes('CN'), '香港目标不该有大陆分区的结果');
 console.log('  ✓ 地区隔离正确');
 

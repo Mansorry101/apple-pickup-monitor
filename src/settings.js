@@ -1,15 +1,3 @@
-/**
- * 运行设置：优先门店、监控门店、监控机型、轮询行为。
- * 全部存在 config.json 里，由网页设置界面读写 —— 不写死在代码中。
- *
- * 分工：
- *   .env        → 邮箱凭据（敏感，界面不碰）
- *   config.json → 门店与机型（界面可改）
- *
- * 机型用「机型|容量|颜色」作为主键，而不是料号 ——
- * 因为同一款机型在各地料号不同（大陆 CH/A、香港 ZA/A），
- * 用主键才能一条记录同时覆盖两地的库存。
- */
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './constants.js';
@@ -19,15 +7,6 @@ import { findVariant, findVariantByKey } from './catalog.js';
 export const SETTINGS_FILE = process.env.SETTINGS_FILE || path.join(ROOT, 'config.json');
 export const CATALOG_CACHE = path.join(ROOT, 'catalog-cache.json');
 
-/**
- * 料号 → 地区（旧配置迁移用）。
- *
- * 注意地区码在斜杠**前面**的末尾两位，不是在斜杠后面：
- *   MJYC4CH/A → SKU "MJYC4CH" 结尾 CH = 中国大陆
- *   MJXU4ZA/A → SKU "MJXU4ZA" 结尾 ZA = 香港
- *   MH3A4ZP/A → SKU "MH3A4ZP" 结尾 ZP = 香港
- * （斜杠后面那个字母是版本/包装标识，跟地区无关。）
- */
 export function regionOfPartNumber(pn) {
   const m = /^([A-Z0-9]{3,12})\/[A-Z]{1,2}$/i.exec(String(pn || '').trim());
   if (!m) return null;
@@ -39,7 +18,6 @@ export function regionOfPartNumber(pn) {
 
 export const PART_RE = /^[A-Z0-9]{4,12}\/[A-Z]{1,2}$/;
 
-/** 默认：广东道 + iPhone 18 Pro Max 512GB 银/黑（用户最初的诉求） */
 export const DEFAULT_SETTINGS = {
   version: 2,
   priorityStore: 'R499',
@@ -48,7 +26,6 @@ export const DEFAULT_SETTINGS = {
   soldOutNotify: true,
   repeatAlertMinutes: 15,
   pollIntervalSeconds: 60,
-  // 香港不需要定位、一次请求就有结果，单独给一个更短的间隔
   hkIntervalSeconds: 5,
   uiPort: 8787,
   targets: [
@@ -63,13 +40,11 @@ const clampInt = (v, dflt, min, max) => {
   return Math.min(max, Math.max(min, n));
 };
 
-/** 把外部传入的门店列表清洗成合法、去重、且包含优先门店的数组 */
 function cleanStores(list, priorityStore) {
   const out = [];
   for (const id of Array.isArray(list) ? list : []) {
     const s = String(id || '').trim().toUpperCase();
     if (!STORE_BY_ID[s] || out.includes(s)) continue;
-    // 澳门没有网上商店，选了也查不了，直接不收
     if (!REGIONS[STORE_BY_ID[s].region].onlineStore) continue;
     out.push(s);
   }
@@ -77,7 +52,6 @@ function cleanStores(list, priorityStore) {
   return out.length ? out : [priorityStore || DEFAULT_SETTINGS.priorityStore];
 }
 
-/** 规范化外部传入的设置，挡住脏数据 */
 export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
   const s = { ...base, ...(input || {}) };
   const inp = input || {};
@@ -87,9 +61,6 @@ export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
       ? s.priorityStore
       : base.priorityStore || DEFAULT_SETTINGS.priorityStore;
 
-  // 注意不能写成 `s.priorityOnly ?? s.cantonOnly`：
-  // base 会把 priorityOnly 填成 false，问号 ?? 就永远短路了，
-  // 结果旧配置里的 cantonOnly: true 被无声丢掉。
   const priorityOnly = inp.priorityOnly !== undefined
     ? Boolean(inp.priorityOnly)
     : inp.cantonOnly !== undefined
@@ -117,14 +88,11 @@ export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
     seen.add(rec.key);
     out.targets.push(rec);
   }
-  // 只有在调用方「根本没提供 targets」时才回退默认值；
-  // 显式传空数组表示用户故意不监控任何机型，应当尊重。
   if (!providedTargets) out.targets = base.targets || DEFAULT_SETTINGS.targets;
 
   return out;
 }
 
-/** 单个监控目标：支持新版（key+parts）与旧版（partNumber）两种写法 */
 function normalizeTarget(t) {
   if (!t || typeof t !== 'object') return null;
   const parts = {};
@@ -132,7 +100,6 @@ function normalizeTarget(t) {
     const v = String(pn || '').trim().toUpperCase();
     if (SEARCHABLE_REGIONS.includes(r) && PART_RE.test(v)) parts[r] = v;
   }
-  // 旧配置：只有一个 partNumber，按后缀推断地区
   if (!Object.keys(parts).length && t.partNumber) {
     const pn = String(t.partNumber).trim().toUpperCase();
     const r = regionOfPartNumber(pn);
@@ -155,7 +122,7 @@ export function loadSettings() {
   let raw = null;
   try {
     raw = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  } catch { /* 首次运行或文件损坏 → 用默认值 */ }
+  } catch {}
   return normalizeSettings(raw, DEFAULT_SETTINGS);
 }
 
@@ -167,10 +134,6 @@ export function saveSettings(settings) {
   return normalized;
 }
 
-/**
- * 用机型目录补全目标：把 key 展开成两地料号 + 直达链接 + 价格。
- * 没有目录缓存时原样保留（料号仍然可用），保证断网也能跑。
- */
 export function enrichTargets(targets, catalog) {
   return (Array.isArray(targets) ? targets : []).map((t) => {
     const byKey = t.key ? findVariantByKey(catalog, t.key) : null;
@@ -190,14 +153,12 @@ export function enrichTargets(targets, catalog) {
   });
 }
 
-/** 这些监控目标涉及哪些地区（决定要建立哪些地区的会话） */
 export function regionsOfTargets(targets) {
   const set = new Set();
   for (const t of targets || []) for (const r of Object.keys(t.parts || {})) set.add(r);
   return SEARCHABLE_REGIONS.filter((r) => set.has(r));
 }
 
-/** 监控门店涉及哪些地区 */
 export function regionsOfStores(storeIds) {
   const set = new Set();
   for (const id of storeIds || []) {
@@ -215,7 +176,6 @@ export function settingsMtime() {
   }
 }
 
-/** 保存的目标保留完整映射；运行时只使用所选门店所在地区的版本。 */
 export function scopeProductsByStores(products, storeIds) {
   const regions = regionsOfStores(storeIds);
   const select = (values) => Object.fromEntries(regions

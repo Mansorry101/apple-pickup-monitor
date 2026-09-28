@@ -1,15 +1,3 @@
-/**
- * 设置界面的浏览器实测（需要本机装有 Chrome / Edge）。
- *
- * 用无头浏览器真的把页面渲染一遍、跑完 JS，再通过 DevTools Protocol
- * 读回每个下拉框的选项数 —— 检查它们是否真的有内容。
- *
- * 起因：界面里「同时监控的门店」的城市/门店两个 <select> 忘了初始化。
- * 它们在原始 HTML 里本来就是空的（选项是 JS 运行时填的），
- * 所以只读源码或只抓 HTML 都发现不了，必须真的渲染一次。
- *
- * 运行： node test/ui.mjs
- */
 import assert from 'node:assert';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -18,7 +6,7 @@ import path from 'node:path';
 import { loadConfig } from '../src/config.js';
 import { startWebUi } from '../src/webui.js';
 
-const UI_PORT = 8899;   // 故意避开 8787，免得和用户正开着的设置窗口打架
+const UI_PORT = 8899;
 const CDP_PORT = 9333;
 
 const BROWSERS = [
@@ -80,7 +68,6 @@ const cleanup = () => {
 };
 process.on('exit', cleanup);
 
-/** 找到页面 target 的调试地址 */
 async function findTarget() {
   for (let i = 0; i < 60; i++) {
     try {
@@ -125,7 +112,6 @@ async function evaluate(expression) {
   return r?.result?.value;
 }
 
-// 等页面把下拉框都填好（bootstrap 是异步的）
 const PROBE = `JSON.stringify((function(){
   var ids = ['p-city','p-store','w-city','w-store','m-family','m-cap','m-color'];
   var out = {};
@@ -166,7 +152,6 @@ for (const id of EXPECTED) {
 }
 console.log('  ✓ 7 个下拉框全部有内容（不会出现「点开是空的」）');
 
-// 这次的回归重点
 assert.ok(snapshot['w-city'].n > 1, '#w-city（同时监控的城市）应当列出多个城市');
 assert.ok(snapshot['w-store'].n > 0, '#w-store（同时监控的门店）应当列出该城市的门店');
 console.log('  ✓ 「同时监控的门店」的城市 / 门店下拉框已正确填充');
@@ -178,7 +163,6 @@ assert.ok(snapshot['m-family'].n >= 5, '机型下拉应当有多个机型可选'
 assert.ok(snapshot['m-color'].n > 0, '颜色下拉应当有选项');
 console.log('  ✓ 机型 / 容量 / 颜色 三级下拉已填充');
 
-// 切一个城市，门店下拉应当跟着变（级联是否真的生效）
 const cityKeys = await evaluate(`JSON.stringify(Array.prototype.map.call(document.getElementById('w-city').options, function(o){return o.value;}))`);
 const keys = JSON.parse(cityKeys);
 const beijing = keys.find((k) => k === 'CN:北京');
@@ -189,7 +173,6 @@ const after = JSON.parse(await evaluate(PROBE));
 assert.ok(after['w-store'].n >= 6, `切到北京后门店下拉应有 6 家，实际 ${after['w-store'].n}`);
 console.log(`  ✓ 级联生效：切到「北京」→ 门店下拉变成 ${after['w-store'].n} 家，首项 "${after['w-store'].first}"`);
 
-// 澳门不可查询 → 门店下拉应被禁用
 const macau = keys.find((k) => k === 'MO:澳門');
 assert.ok(macau, '城市列表里应当有 澳門');
 await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(macau)};s.dispatchEvent(new Event('change'));return 1;})()`);

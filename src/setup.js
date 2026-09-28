@@ -1,19 +1,4 @@
 #!/usr/bin/env node
-/**
- * 首次启动向导：收集 收件邮箱 / 发件邮箱 / 授权码，验证后写入 .env。
- *
- *   node src/setup.js                      交互式（推荐）
- *   node src/setup.js --to a@x.com --from b@qq.com --pass xxxx --no-test   无人值守
- *
- * 设计上「问一次就好」：.env 一旦写好，以后启动不再打扰。
- *
- * 输入层注意事项（踩过的坑）：
- *  - 非 TTY（管道 / < 重定向）时，readline 会一次性读完整个流并立刻发出所有 line 事件。
- *    如果此时只有一个 question() 在等待，后面的行会被直接丢弃，导致第二个问题永久卡住。
- *    所以非 TTY 下先把所有行读进队列，再逐条回答。
- *  - TTY 下用同一个 readline；只有最后一步的密码输入会关掉它改用 raw mode 隐藏回显，
- *    避免两个接口争抢 stdin。
- */
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import fs from 'node:fs';
@@ -39,7 +24,6 @@ const C = {
 
 export const stripAnsi = (s) => String(s).replace(/\x1b\[[0-9;]*m/g, '');
 
-/** 统一的输入源：TTY 用 readline，非 TTY 预读全部行 */
 class LineSource {
   constructor() {
     this.rl = null;
@@ -64,7 +48,6 @@ class LineSource {
   async ask(prompt) {
     if (this.rl) return (await this.rl.question(prompt)).trim();
 
-    // 非 TTY：从队列取，并把提示打到日志里（便于排错）
     stdout.write(prompt);
     if (this.idx >= this.lines.length || (this.idx === this.lines.length - 1 && this.lines[this.idx] === '')) {
       throw new Error(
@@ -77,8 +60,6 @@ class LineSource {
     return line.trim();
   }
 
-  /** 只在 TTY 下可用的隐藏输入（会关闭 readline，因此必须是最后一个问题）
-   *  prompt 完整写一次；redraw 是每次按键后重画的行前缀 */
   async askHidden(prompt, redraw = '   > ') {
     if (!this.rl) return this.ask(prompt);
 
@@ -91,7 +72,7 @@ class LineSource {
       let buf = '';
       const cleanup = () => {
         stdin.removeListener('data', onData);
-        try { stdin.setRawMode(wasRaw); } catch { /* 终端不支持时忽略 */ }
+        try { stdin.setRawMode(wasRaw); } catch {}
         stdin.pause();
       };
       const onData = (chunk) => {
@@ -130,7 +111,7 @@ function readExisting() {
       const i = t.indexOf('=');
       if (i > 0) out[t.slice(0, i).trim()] = t.slice(i + 1).trim();
     }
-  } catch { /* 首次运行，没有 .env */ }
+  } catch {}
   return out;
 }
 
@@ -171,10 +152,9 @@ MAX_RETRIES=6
 SESSION_REFRESH_MINUTES=30
 `;
   fs.writeFileSync(ENV_PATH, content, 'utf8');
-  try { fs.chmodSync(ENV_PATH, 0o600); } catch { /* Windows 上无实际意义 */ }
+  try { fs.chmodSync(ENV_PATH, 0o600); } catch {}
 }
 
-/** 交互式向导。返回 true = 配置完成 */
 export async function runSetup(argv = [], out = console.log) {
   const arg = (name, dflt = '') => {
     const i = argv.indexOf(`--${name}`);
@@ -208,7 +188,6 @@ export async function runSetup(argv = [], out = console.log) {
       const label = (t, hint = '') =>
         `${C.cyan}${step++}. ${t}${C.reset}${hint ? ` ${C.dim}(${hint})${C.reset}` : ''}`;
 
-      // ---- 1. 收件邮箱 ----
       let head = label('收件邮箱', '有货通知发到这里，例如你的 Outlook');
       let answer = '';
       while (!EMAIL_RE.test(answer)) {
@@ -217,7 +196,6 @@ export async function runSetup(argv = [], out = console.log) {
       }
       to = answer;
 
-      // ---- 2. 发件邮箱 ----
       out('');
       const dflt = existing.SMTP_USER || '';
       head = label('发件邮箱', `用来发送的 QQ 邮箱${dflt ? `，回车沿用 ${dflt}` : ''}`);
@@ -228,7 +206,6 @@ export async function runSetup(argv = [], out = console.log) {
       }
       from = answer;
 
-      // ---- 3. SMTP 服务器（非 QQ 邮箱时才问） ----
       host = from.endsWith('@qq.com') ? 'smtp.qq.com' : '';
       while (!host) {
         out('');
@@ -238,7 +215,6 @@ export async function runSetup(argv = [], out = console.log) {
         if (!host) { step--; out(`   ${C.red}✗ 请输入 1-4 或直接回车${C.reset}`); }
       }
 
-      // ---- 4. 授权码（最后一个问题） ----
       out('');
       out(`${C.dim}   拿授权码：QQ邮箱网页版 → 设置 → 账号 → 开启「IMAP/SMTP服务」→ 短信验证 → 得 16 位授权码${C.reset}`);
       const authHead = label('SMTP 授权码', '不是登录密码');
@@ -292,7 +268,6 @@ export async function runSetup(argv = [], out = console.log) {
     }
 
     writeEnvFile({ host, port, secure, from, pass, to });
-    // 让本次进程内的配置立即生效
     Object.assign(process.env, {
       SMTP_HOST: host, SMTP_PORT: String(port), SMTP_SECURE: String(secure),
       SMTP_USER: from, SMTP_PASS: pass, MAIL_FROM: from, MAIL_TO: to,
@@ -308,7 +283,6 @@ export async function runSetup(argv = [], out = console.log) {
   }
 }
 
-// 直接运行： node src/setup.js
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   loadEnvFile();
   const ok = await runSetup(process.argv.slice(2));

@@ -1,10 +1,3 @@
-/**
- * 抓取机型目录并写入 catalog-cache.json。
- *   node tools/build-catalog.mjs
- *
- * 打包时会把生成的 catalog-cache.json 一起带上，这样新电脑首次启动
- * 就能直接在下拉框里选机型，不用等网络抓取。
- */
 import { fetchCatalog, saveCatalogCache } from '../src/catalog.js';
 import { CATALOG_CACHE } from '../src/settings.js';
 

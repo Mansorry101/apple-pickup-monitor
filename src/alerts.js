@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-/** 记录观测和待发送事件；只有 acknowledgeAlerts 才记录通知成功。 */
 export function decideAlerts(results, state, cfg, now = Date.now()) {
   state.parts ||= {};
   const priorityItems = [], otherItems = [], soldOut = [];
@@ -11,7 +10,6 @@ export function decideAlerts(results, state, cfg, now = Date.now()) {
     const scope = JSON.stringify([cfg.priorityStore, [...(cfg.watchStores || [])].sort(), r.parts]);
     let prev = state.parts[key] || { role: 'none' };
     if (prev.scope && prev.scope !== scope) prev = { role: 'none' };
-    // 优先地区未知时，不能把此前的优先门店库存降级为备选。
     if (!r.atPriority && r.priorityKnown === false && prev.role === 'priority') continue;
     const role = r.atPriority ? 'priority' : r.stores.length ? 'other' : 'none';
     const next = { ...prev, scope, role, stores: r.stores, lastSeenAt: stamp,
@@ -36,7 +34,6 @@ export function decideAlerts(results, state, cfg, now = Date.now()) {
     isReminder: priorityItems.length > 0 && priorityItems.every((r) => r.reminder) };
 }
 
-/** 发信成功后确认对应事件，避免清除随后产生的新事件。 */
 export function acknowledgeAlerts(items, state, now = Date.now()) {
   for (const item of items) {
     const entry = state.parts[item.key || item.partNumber];
