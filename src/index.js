@@ -9,7 +9,7 @@ import { deliverAlerts } from './notifications.js';
 import { runSetup } from './setup.js';
 import { startWebUi } from './webui.js';
 import { settingsMtime } from './settings.js';
-import { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs } from './scheduler.js';
+import { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs, pollPlan, parseHHMM, msUntilWindowEdge } from './scheduler.js';
 import { VERSION } from './constants.js';
 
 const argv = process.argv.slice(2);
@@ -56,6 +56,10 @@ function banner(extra = '') {
         .join('，')
     : '—';
   console.log(` 轮询间隔 : ${intervalText}`);
+  if (cfg.rushEnabled) {
+    console.log(` 放货时段 : 北京时间 ${cfg.rushStart}–${cfg.rushEnd}（大陆 ${cfg.rushPollIntervalSeconds} 秒 / 香港 ${cfg.rushHkIntervalSeconds} 秒 / 优先 ${cfg.rushPriorityIntervalSeconds} 秒）`);
+  }
+  if (cfg.priorityBoost) console.log(` 优先通道 : 常规 ${cfg.priorityIntervalSeconds} 秒，只查优先门店所在城市的优先机型`);
   console.log(` 通知邮箱 : ${cfg.mail.to.join(', ') || '(未配置)'}`);
   if (extra) console.log(` ${extra}`);
   console.log('='.repeat(68));
@@ -75,21 +79,20 @@ function render(results) {
     const parts = Object.entries(r.parts || {}).map(([k, v]) => `${rshort(k)} ${v}`).join(' / ');
     const stores = r.stores.length ? r.stores.map(storeLabel).join('、') : r.complete === false ? '库存未知（查询未完成或失败）' : '无门店有货';
     const warning = r.complete === false ? ' [部分地区数据未知]' : '';
-    const extra = r.otherStores?.length ? `   (附近另有 ${r.otherStores.length} 家门店有货，未监控)` : '';
     const localLines = Object.entries(r.perRegion || {}).map(([region, d]) => {
       const local = r.stores.filter((id) => STORE_BY_ID[id]?.region === region);
       return rshort(region) + '版本 ' + d.partNumber + ' → ' +
-        (d.ok === false ? (d.pending ? '等待下一轮查询' : '库存未知') : local.map(storeLabel).join('、') || '无门店有货');
+        (d.ok === false ? (d.pending ? '等待下一轮查询' : d.inProgress ? '查询中' : '库存未知') : local.map(storeLabel).join('、') || '无门店有货');
     });
     lines.push('  • ' + r.product.name + '\n      ' +
-      (localLines.length ? localLines.join('\n      ') : '[' + parts + '] → ' + stores) + extra + warning);
+      (localLines.length ? localLines.join('\n      ') : '[' + parts + '] → ' + stores) + warning);
   }
   return lines.join('\n');
 }
 
 function queryErrors(results) {
   return [...new Set(results.flatMap((r) => Object.entries(r.perRegion || {})
-    .filter(([, d]) => d.ok === false && !d.pending).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
+    .filter(([, d]) => d.ok === false && !d.pending && !d.inProgress).map(([region, d]) => region + ': ' + d.error)))].join('；') || null;
 }
 
 const SIM_POOL = {
@@ -124,6 +127,7 @@ async function run() {
     startedAt: new Date().toISOString(),
     // 邮箱连通性：ok=null 表示还没验证过。界面据此显示红点，避免"邮箱坏了却一直显示正常"。
     mail: { ok: null, error: null, checkedAt: null },
+    schedule: null,
   };
 
   function setMailStatus(ok, error = null) {
@@ -173,9 +177,17 @@ async function run() {
   process.on('SIGTERM', stop);
 
   let client = new ApplePickupClient(cfg, log);
+  // 每个机型最近一次的展示结果（raw），优先通道的局部结果据此合并
+  const latestRows = new Map();
   let clientSig = clientSignature(cfg);
 
   const dueAt = {};
+  // 主循环睡眠可被唤醒：配置变化、某地区查完时立即重新调度
+  let wake = () => {};
+  const waitFor = (ms) => new Promise((resolve) => {
+    const timer = ms === Infinity ? null : setTimeout(resolve, Math.max(0, ms));
+    wake = () => { if (timer) clearTimeout(timer); resolve(); };
+  });
 
   function reload(why = '配置变更') {
     cfg = loadConfig();
@@ -185,6 +197,7 @@ async function run() {
       client = new ApplePickupClient(cfg, log);
       clientSig = sig;
       status.results = [];
+      latestRows.clear();
       status.lastCheckAt = null;
       status.lastError = null;
       log(`[配置] ${why} → 监控目标已更新，重建会话`);
@@ -192,6 +205,7 @@ async function run() {
     } else {
       log(`[配置] ${why} → 已重新加载`);
     }
+    wake();
   }
   const productsPreview = () =>
     cfg.products.map((p) => ({
@@ -211,7 +225,6 @@ async function run() {
       parts: r.parts,
       stores: r.stores,
       storeLabels: r.stores.map(storeLabel),
-      otherStores: r.otherStores || [],
       atPriority: r.atPriority,
       count: r.count,
       deliveryDate: r.deliveryDate,
@@ -233,6 +246,8 @@ async function run() {
           const checkClient = client;
           const results = await checkClient.checkAvailability();
           if (checkClient !== client) throw new Error('监控目标已变更，请重新检查');
+          latestRows.clear();
+          for (const r of results) latestRows.set(r.key, r);
           status.results = asStatus(results);
           status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
           status.lastError = queryErrors(results);
@@ -278,13 +293,43 @@ async function run() {
 
   let cycle = 0;
   let lastSettingsMtime = settingsMtime();
-  const intervalMsOf = (region) => (region === 'HK' ? cfg.hkIntervalSeconds : cfg.intervalSeconds) * 1000;
   const regionPrint = {};
   let lastFingerprint = null;
-  while (!stopping) {
-    const active = client.activeRegions();
+  const inFlight = new Map(); // 通道（CN / HK / PRI）→ 正在进行的轮次
+  let updateChain = Promise.resolve();
+  let lastRush = null;
+  const LANE_LABEL = { CN: '大陆', HK: '香港', PRI: '优先' };
+  const priorityKeys = () => cfg.products.filter((p) => p.priority).map((p) => p.key);
 
-    if (!active.length) {
+  /** 当前要跑的通道：各监控地区 + （需要时）优先通道 */
+  function lanesNow(plan) {
+    const active = client.activeRegions();
+    const lanes = active.map((r) => ({ id: r, region: r, interval: plan.intervals[r] ?? plan.intervals.CN }));
+    const scope = cfg.priorityBoost ? client.priorityScope(priorityKeys()) : null;
+    // 只有比所在地区整轮更勤时才开优先通道，否则它只是重复请求
+    if (scope && active.includes(scope.region) && plan.intervals.PRI < (plan.intervals[scope.region] ?? Infinity)) {
+      lanes.push({ id: 'PRI', region: scope.region, interval: plan.intervals.PRI });
+    }
+    return lanes;
+  }
+
+  while (!stopping) {
+    const mt = settingsMtime();
+    if (mt !== lastSettingsMtime) {
+      lastSettingsMtime = mt;
+      reload('检测到 config.json 变化');
+      continue;
+    }
+
+    const plan = pollPlan(cfg, Date.now());
+    if (lastRush !== null && plan.rush !== lastRush) {
+      log(plan.rush ? `[调度] 进入放货时段（${cfg.rushStart}–${cfg.rushEnd}），切换为高速查询` : '[调度] 放货时段结束，恢复常规查询');
+      for (const key of Object.keys(dueAt)) delete dueAt[key];
+    }
+    lastRush = plan.rush;
+
+    const lanes = lanesNow(plan);
+    if (!lanes.length) {
       cycle++;
       const started = Date.now();
       try {
@@ -297,67 +342,164 @@ async function run() {
       continue;
     }
 
-    const due = dueRegions(dueAt, active, Date.now());
-    if (!due.length) {
-      await sleep(msUntilNextDue(dueAt, active, Date.now()));
+    // 被限流的地区：冷却结束前不再派发
+    for (const lane of lanes) {
+      const until = client.cooldownUntil(lane.region);
+      if (until && (dueAt[lane.id] === undefined || dueAt[lane.id] < until)) dueAt[lane.id] = until;
+    }
+    status.schedule = {
+      rush: plan.rush,
+      rushEnabled: cfg.rushEnabled,
+      rushWindow: cfg.rushStart + '–' + cfg.rushEnd,
+      lanes: lanes.map((l) => ({
+        id: l.id, label: LANE_LABEL[l.id] || l.id, region: l.region,
+        intervalSeconds: l.interval / 1000,
+        running: inFlight.has(l.id),
+        nextAt: dueAt[l.id] || null,
+        cooldownUntil: client.cooldownUntil(l.region) || null,
+      })),
+    };
+
+    // 正在查询中的通道不重复派发；各通道独立并发，大陆的慢查询 / 重试不会拖住香港。
+    const idle = lanes.filter((l) => !inFlight.has(l.id));
+    const due = dueRegions(dueAt, idle.map((l) => l.id), Date.now());
+    if (due.length) {
+      cycle++;
+      const started = Date.now();
+      for (const lane of idle.filter((l) => due.includes(l.id))) {
+        dueAt[lane.id] = nextDueAt(started, lane.interval, pollJitterMs(lane.interval));
+      }
+      const regionsDue = due.filter((id) => id !== 'PRI');
+      const tasks = [];
+      if (regionsDue.length) {
+        const reuseMaxAgeMs = Math.min(...lanes.filter((l) => l.id !== 'PRI').map((l) => l.interval));
+        tasks.push([regionsDue, runRound(cycle, regionsDue, started, reuseMaxAgeMs)]);
+      }
+      if (due.includes('PRI')) tasks.push([['PRI'], runPriorityRound(cycle, started)]);
+      for (const [ids, task] of tasks) {
+        for (const id of ids) inFlight.set(id, task);
+        task.finally(() => {
+          for (const id of ids) if (inFlight.get(id) === task) inFlight.delete(id);
+          wake();
+        });
+      }
       continue;
     }
 
-    cycle++;
-    const started = Date.now();
-    for (const region of due) {
-      const intervalMs = intervalMsOf(region);
-      dueAt[region] = nextDueAt(started, intervalMs, pollJitterMs(intervalMs));
-    }
+    // 睡到下一个通道到期，或者放货时段开始 / 结束（到点立即切换间隔）
+    const idleIds = idle.map((l) => l.id);
+    const untilDue = idleIds.length ? msUntilNextDue(dueAt, idleIds, Date.now()) : Infinity;
+    const untilEdge = cfg.rushEnabled ? msUntilWindowEdge(Date.now(), parseHHMM(cfg.rushStart), parseHHMM(cfg.rushEnd)) : Infinity;
+    await waitFor(Math.min(untilDue, untilEdge));
+  }
 
-    try {
-      const mt = settingsMtime();
-      if (mt !== lastSettingsMtime) {
-        lastSettingsMtime = mt;
-        reload('检测到 config.json 变化');
+  function makeSender(checkCfg) {
+    return async (mail) => {
+      if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
+      const t = await getTransport();
+      if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
+      try {
+        const info = await sendMail(t, checkCfg, mail);
+        setMailStatus(true);
+        return info;
+      } catch (e) {
+        setMailStatus(false, e.message);
+        throw e;
       }
+    };
+  }
 
+  /**
+   * 仅用于界面展示：本轮没查的地区（pending）沿用上一次的已知结果，
+   * 避免香港 3 秒一轮时大陆在「无货」和「等待下一轮」之间来回跳。告警不走这里。
+   */
+  function keepKnownRegions(prev, next) {
+    if (!prev) return next;
+    const perRegion = { ...next.perRegion };
+    let stores = [...(next.stores || [])];
+    let changed = false;
+    for (const [r, d] of Object.entries(next.perRegion || {})) {
+      const old = prev.perRegion?.[r];
+      if (!(d.pending || d.inProgress) || !old || old.pending || old.inProgress) continue;
+      perRegion[r] = old;
+      stores = stores.filter((id) => STORE_BY_ID[id]?.region !== r)
+        .concat((prev.stores || []).filter((id) => STORE_BY_ID[id]?.region === r));
+      changed = true;
+    }
+    if (!changed) return next;
+    stores.sort((a, b) => (a === cfg.priorityStore ? -1 : b === cfg.priorityStore ? 1 : 0));
+    const regional = Object.values(perRegion);
+    const complete = regional.length > 0 && regional.every((d) => d.ok);
+    return { ...next, perRegion, stores, count: stores.length, atPriority: stores.includes(cfg.priorityStore),
+      complete, availability: stores.length ? 'available' : complete ? 'unavailable' : 'unknown' };
+  }
+
+  /** 更新界面状态和日志指纹；返回结果是否有变化 */
+  function publish(displayRows, printRows, prefix) {
+    for (const r of displayRows) latestRows.set(r.key, keepKnownRegions(latestRows.get(r.key), r));
+    status.results = asStatus(cfg.products.map((p) => latestRows.get(p.key)).filter(Boolean));
+    status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
+    for (const row of printRows) {
+      for (const [reg, d] of Object.entries(row.perRegion || {})) {
+        if (d.pending) continue;
+        regionPrint[prefix + row.key + '|' + reg] = JSON.stringify([d.ok, d.stores, d.error]);
+      }
+    }
+    const fingerprint = Object.keys(regionPrint).sort().map((k) => k + '=' + regionPrint[k]).join(';');
+    const changed = fingerprint !== lastFingerprint;
+    lastFingerprint = fingerprint;
+    return changed;
+  }
+
+  async function runPriorityRound(round, started) {
+    try {
+      const checkClient = client;
+      const checkCfg = cfg;
+      const rows = await checkClient.checkPriority(priorityKeys());
+      const job = updateChain.then(async () => {
+        if (checkCfg !== cfg || checkClient !== client) return;
+        // 展示：并入最近一次完整结果；告警：只用本通道确认过的数据（不完整时不会下「售罄」结论）
+        const display = rows.map((r) => checkClient.mergeLaneRow(latestRows.get(r.key), r));
+        const changed = publish(display, rows, 'PRI|');
+        const tag = '#' + round + ' [优先] (' + (Date.now() - started) + 'ms)';
+        log(changed ? tag + ' 优先门店结果更新\n' + render(display) : tag + ' 无变化');
+        const errors = await deliverAlerts(rows, state, checkCfg, { persist, dryRun, log, send: makeSender(checkCfg) });
+        const all = cfg.products.map((p) => latestRows.get(p.key)).filter(Boolean);
+        status.lastError = [queryErrors(all), ...errors].filter(Boolean).join('；') || null;
+      });
+      updateChain = job.catch(() => {});
+      await job;
+    } catch (e) {
+      log(`#${round} ❌ 优先通道检查失败: ${e.message}`);
+      status.lastError = e.message;
+    }
+  }
+
+  async function runRound(round, due, started, reuseMaxAgeMs) {
+    try {
       const checkClient = client;
       const checkCfg = cfg;
       const mailErrors = new Set();
-      await checkClient.checkAvailability({ only: due, onUpdate: async (results) => {
-        if (checkCfg !== cfg) return;
-        status.results = asStatus(results);
-        status.lastCheckAt = new Date().toLocaleTimeString('zh-CN');
-        for (const row of results) {
-          for (const [reg, d] of Object.entries(row.perRegion || {})) {
-            if (d.pending) continue;
-            regionPrint[row.key + '|' + reg] = JSON.stringify([d.ok, d.stores, d.error]);
-          }
-        }
-        const fingerprint = Object.keys(regionPrint).sort().map((k) => k + '=' + regionPrint[k]).join(';');
-        if (fingerprint === lastFingerprint) {
-          log('#' + cycle + ' 无变化 [' + due.join('+') + '] (' + (Date.now() - started) + 'ms)');
-        } else {
-          lastFingerprint = fingerprint;
-          log('#' + cycle + ' 地区结果更新 [' + due.join('+') + '] (' + (Date.now() - started) + 'ms)\n' + render(results));
-        }
-        const errors = await deliverAlerts(results, state, checkCfg, {
-          persist, dryRun, log,
-          send: async (mail) => {
-            if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
-            const t = await getTransport();
-            if (checkCfg !== cfg) throw new Error('配置已变化，取消旧通知');
-            try {
-              const info = await sendMail(t, checkCfg, mail);
-              setMailStatus(true);
-              return info;
-            } catch (e) {
-              setMailStatus(false, e.message);
-              throw e;
-            }
-          },
-        });
+      // 其他地区若在「最短轮询间隔」内刚查过，就并入本轮快照，
+      // 这样两地交替出结果时也能得到完整结论（例如两地都售罄）。
+      await checkClient.checkAvailability({ only: due, reuseMaxAgeMs, onUpdate: (results) => {
+        // 不同通道的轮次会并发出结果：状态更新和发信串行处理，避免重复发信。
+        const job = updateChain.then(() => handleResults(results));
+        updateChain = job.catch(() => {});
+        return job;
+      } });
+
+      async function handleResults(results) {
+        if (checkCfg !== cfg || checkClient !== client) return;
+        const changed = publish(results, results, '');
+        const tag = '#' + round + ' [' + due.map((id) => LANE_LABEL[id] || id).join('+') + '] (' + (Date.now() - started) + 'ms)';
+        log(changed ? tag + ' 地区结果更新\n' + render(results) : tag + ' 无变化');
+        const errors = await deliverAlerts(results, state, checkCfg, { persist, dryRun, log, send: makeSender(checkCfg) });
         for (const error of errors) mailErrors.add(error);
         status.lastError = [queryErrors(results), ...mailErrors].filter(Boolean).join('；') || null;
-      } });
+      }
     } catch (e) {
-      log(`#${cycle} ❌ 本轮检查失败: ${e.message}`);
+      log(`#${round} ❌ 本轮检查失败: ${e.message}`);
       status.lastError = e.message;
     }
   }

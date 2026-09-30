@@ -31,7 +31,6 @@ const results = await client.checkAvailability();
 for (const r of results) {
   console.log(`\n  ${r.product.name}`);
   console.log(`    命中门店: ${r.stores.join(', ') || '(无)'}`);
-  console.log(`    Apple 报出的全部门店: ${r.otherStores.concat(r.stores).join(', ') || '(无)'}`);
   console.log(`    优先门店(${cfg.priorityStore})有货: ${r.atPriority}`);
 }
 

@@ -102,6 +102,20 @@ export function startWebUi(ctx, log = console.log) {
         });
       }
 
+      // 轻量状态接口：界面高频轮询用，不带机型目录（bootstrap 有 100KB+）
+      if (route === 'GET /api/status') {
+        const cfg = ctx.getCfg();
+        return json(res, 200, {
+          status: ctx.status(),
+          mail: {
+            configured: Boolean(cfg.mail.user && cfg.mail.pass && cfg.mail.to.length),
+            from: cfg.mail.user,
+            to: cfg.mail.to,
+          },
+          now: Date.now(),
+        });
+      }
+
       if (route === 'POST /api/settings') {
         const body = await readBody(req);
         const catalog = loadCatalogCache(CATALOG_CACHE);

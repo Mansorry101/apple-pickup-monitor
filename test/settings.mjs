@@ -135,6 +135,20 @@ console.log('\n=== 数值范围钳制 ===');
   assert.equal(both.pollIntervalSeconds, 120);
   assert.equal(both.hkIntervalSeconds, 5);
   console.log('  ✓ 轮询间隔 / 香港间隔 / 重复提醒 / 端口 都被正确钳制');
+
+  // 放货时段与优先通道
+  const d = normalizeSettings({});
+  assert.equal(d.rushEnabled, true); assert.equal(d.rushStart, '06:00'); assert.equal(d.rushEnd, '09:00');
+  assert.equal(d.priorityBoost, true); assert.equal(d.priorityIntervalSeconds, 20);
+  const r = normalizeSettings({ rushStart: '6:5', rushEnd: '7:30', rushPollIntervalSeconds: 1, rushHkIntervalSeconds: 1,
+    rushPriorityIntervalSeconds: 1, priorityIntervalSeconds: 1, rushEnabled: false, priorityBoost: false });
+  assert.equal(r.rushStart, '06:00', '格式不对回到默认'); assert.equal(r.rushEnd, '07:30');
+  assert.equal(r.rushPollIntervalSeconds, 15, '放货时段大陆也不低于 15 秒');
+  assert.equal(r.rushHkIntervalSeconds, 3); assert.equal(r.rushPriorityIntervalSeconds, 5); assert.equal(r.priorityIntervalSeconds, 5);
+  assert.equal(r.rushEnabled, false); assert.equal(r.priorityBoost, false);
+  const star = normalizeSettings({ targets: [{ key: 'X', parts: { HK: 'MJXU4ZA/A' }, priority: true }, { key: 'Y', parts: { HK: 'MJXT4ZA/A' } }] });
+  assert.equal(star.targets[0].priority, true); assert.equal(star.targets[1].priority, undefined);
+  console.log('  ✓ 放货时段 / 优先通道设置被正确校验，机型的「优先」标记会保存');
 }
 
 console.log('\n=== 目录补全（多地区）===');

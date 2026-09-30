@@ -27,11 +27,27 @@ export const DEFAULT_SETTINGS = {
   repeatAlertMinutes: 15,
   pollIntervalSeconds: 60,
   hkIntervalSeconds: 5,
+  // 优先门店 + 优先机型的快速通道：只查优先门店所在城市，比整轮扫描更勤
+  priorityBoost: true,
+  priorityIntervalSeconds: 20,
+  // 放货时段（北京时间）：这段时间内使用更快的间隔
+  rushEnabled: true,
+  rushStart: '06:00',
+  rushEnd: '09:00',
+  rushPollIntervalSeconds: 15,
+  rushHkIntervalSeconds: 3,
+  rushPriorityIntervalSeconds: 8,
   uiPort: 8787,
   targets: [
     { key: 'iPhone 18 Pro Max|512GB|Silver', name: 'iPhone 18 Pro Max 512GB 银色', parts: { HK: 'MJXU4ZA/A' } },
     { key: 'iPhone 18 Pro Max|512GB|Black', name: 'iPhone 18 Pro Max 512GB 黑色', parts: { HK: 'MJXT4ZA/A' } },
   ],
+};
+
+const hhmm = (v, dflt) => {
+  const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(String(v || '').trim());
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return dflt;
+  return String(m[1]).padStart(2, '0') + ':' + m[2];
 };
 
 const clampInt = (v, dflt, min, max) => {
@@ -76,6 +92,14 @@ export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
     repeatAlertMinutes: clampInt(s.repeatAlertMinutes, 15, 0, 24 * 60),
     pollIntervalSeconds: clampInt(s.pollIntervalSeconds, 60, 15, 24 * 3600),
     hkIntervalSeconds: clampInt(s.hkIntervalSeconds, 5, 3, 24 * 3600),
+    priorityBoost: s.priorityBoost !== false,
+    priorityIntervalSeconds: clampInt(s.priorityIntervalSeconds, 20, 5, 24 * 3600),
+    rushEnabled: s.rushEnabled !== false,
+    rushStart: hhmm(s.rushStart, '06:00'),
+    rushEnd: hhmm(s.rushEnd, '09:00'),
+    rushPollIntervalSeconds: clampInt(s.rushPollIntervalSeconds, 15, 15, 24 * 3600),
+    rushHkIntervalSeconds: clampInt(s.rushHkIntervalSeconds, 3, 3, 24 * 3600),
+    rushPriorityIntervalSeconds: clampInt(s.rushPriorityIntervalSeconds, 8, 5, 24 * 3600),
     uiPort: clampInt(s.uiPort, 8787, 1024, 65535),
     targets: [],
   };
@@ -111,6 +135,7 @@ function normalizeTarget(t) {
   return {
     key,
     name: String(t.name || key).slice(0, 120),
+    ...(t.priority ? { priority: true } : {}),
     parts,
     buyUrls: Object.fromEntries(
       Object.entries(t.buyUrls || {}).filter(([, u]) => /^https?:\/\//i.test(u || '')),
@@ -140,6 +165,7 @@ export function enrichTargets(targets, catalog) {
     const byPart = byKey || findVariant(catalog, Object.values(t.parts || {})[0]);
     if (!byPart) return t;
     return {
+      ...(t.priority ? { priority: true } : {}),
       key: byPart.key,
       name: `${byPart.family} ${byPart.capacity} ${byPart.colorZh}`,
       parts: { ...t.parts, ...byPart.parts },

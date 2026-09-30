@@ -58,6 +58,7 @@ export function loadConfig() {
     const buyUrls = { ...(t.buyUrls || {}), ...((fallback && fallback.buyUrls) || {}) };
     return {
       key: t.key,
+      priority: Boolean(t.priority),
       name: fallback ? `${fallback.family} ${fallback.capacity} ${fallback.colorZh}` : t.name || t.key,
       family: fallback?.family || '',
       capacity: fallback?.capacity || '',
@@ -109,6 +110,14 @@ export function loadConfig() {
 
     intervalSeconds: settings.pollIntervalSeconds,
     hkIntervalSeconds: settings.hkIntervalSeconds,
+    priorityBoost: settings.priorityBoost,
+    priorityIntervalSeconds: settings.priorityIntervalSeconds,
+    rushEnabled: settings.rushEnabled,
+    rushStart: settings.rushStart,
+    rushEnd: settings.rushEnd,
+    rushPollIntervalSeconds: settings.rushPollIntervalSeconds,
+    rushHkIntervalSeconds: settings.rushHkIntervalSeconds,
+    rushPriorityIntervalSeconds: settings.rushPriorityIntervalSeconds,
     priorityOnly: settings.priorityOnly,
     soldOutNotify: settings.soldOutNotify,
     repeatAlertMinutes: settings.repeatAlertMinutes,

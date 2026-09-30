@@ -409,3 +409,158 @@ test('版本号在 package.json 与代码常量间保持一致',()=>{
   assert.equal(pkg.version,VERSION);
   assert.equal(lock.version,VERSION);assert.equal(lock.packages[''].version,VERSION);
 });
+
+// ---------- 查询速度相关 ----------
+test('不同地区的查询不互相排队：大陆卡住时香港仍可完成',async()=>{
+  const client=new ApplePickupClient(cfg,()=>{}),gate=deferred();
+  client.checkRegion=async(region)=>{if(region==='CN')await gate.promise;return regional(region,region==='HK'?['R499']:[]);};
+  const cn=client.checkAvailability({only:['CN']});
+  const hk=await client.checkAvailability({only:['HK']});
+  assert.equal(hk[0].perRegion.HK.ok,true);assert.equal(hk[0].atPriority,true);
+  gate.resolve();await cn;
+});
+
+test('大陆重试只重查失败的城市，成功城市不重建会话',async()=>{
+  const client=new ApplePickupClient({...cfg,watchRegions:['CN'],watchStores:['R401','R320'],maxRetries:3},()=>{});
+  const calls={},rebuilt=[];
+  for (const city of ['CN:上海','CN:北京']) {
+    const s=client.session('CN',city);calls[city]=0;
+    s.ready=true;s.createdAt=Date.now();s.warmedKey=city;s.setLocation=async()=>{};s.warmUp=async()=>true;
+    s.ensureSession=async()=>{s.ready=true;s.createdAt=Date.now();rebuilt.push(city);};
+    s.queryParts=async(parts)=>{calls[city]++;
+      if(city==='CN:北京'&&calls[city]===1)throw new Error('boom');
+      return parts.map(p=>item(p,city==='CN:上海'?0:1)).map(x=>x.partAvailableStoresCount?{...x,eligibleStores:'R320'}:x);};
+  }
+  const data=await client.checkRegion('CN',[product]);
+  assert.equal(calls['CN:上海'],1,'成功的城市不重查');assert.equal(calls['CN:北京'],2);
+  assert.deepEqual(data.P.stores,['R320']);
+  assert.deepEqual(rebuilt,['CN:北京'],'只重建失败城市的会话');
+});
+
+test('同一城市的多个批次并发发出',async()=>{
+  const products=Array.from({length:12},(_,i)=>({...product,key:'P'+i,parts:{HK:'TEST'+i+'ZP/A'}}));
+  const {client,s}=mockSession(products);let inFlight=0,peak=0;
+  s.queryParts=async(parts)=>{inFlight++;peak=Math.max(peak,inFlight);await new Promise(r=>setTimeout(r,10));inFlight--;return parts.map(p=>item(p,1));};
+  const rows=await client.checkAvailability();
+  assert.equal(peak,2);assert.ok(rows.every(r=>r.atPriority));
+});
+
+test('并发轮次交替回调时，快照取每个地区最新结果；复用近期其他地区结果得到完整结论',async()=>{
+  const client=new ApplePickupClient(cfg,()=>{});
+  client.checkRegion=async(region)=>regional(region,[]);
+  await client.checkAvailability({only:['HK']});
+  const [r]=await client.checkAvailability({only:['CN'],reuseMaxAgeMs:60_000});
+  assert.equal(r.complete,true,'香港刚查过，可并入大陆轮次');assert.equal(r.availability,'unavailable');
+  const [r2]=await client.checkAvailability({only:['CN']});
+  assert.equal(r2.perRegion.HK.pending,true,'默认不复用');
+  client.checkRegion=async()=>{throw new Error('offline');};
+  await client.checkAvailability({only:['HK']});
+  const [r3]=await client.checkAvailability({only:['CN'],reuseMaxAgeMs:60_000});
+  assert.equal(r3.perRegion.HK.ok,false,'较新的失败结果不能被旧的成功结果掩盖');assert.equal(r3.availability,'unknown');
+});
+
+test('只保留选中的门店：Apple 连带返回的附近门店被丢弃',async()=>{
+  const client=new ApplePickupClient({...cfg,watchRegions:['CN'],watchStores:['R401']},()=>{});
+  const s=client.session('CN','CN:上海');
+  s.ready=true;s.createdAt=Date.now();s.warmedKey='CN:上海';s.setLocation=async()=>{};s.warmUp=async()=>true;
+  // R320 不在监控列表里（附近城市的门店）
+  s.queryParts=async(parts)=>parts.map(p=>({...item(p,2),eligibleStores:'R401,R320'}));
+  const [r]=await client.checkAvailability();
+  assert.deepEqual(r.stores,['R401']);assert.deepEqual(r.perRegion.CN.stores,['R401']);
+  assert.equal(r.otherStores,undefined);
+});
+
+// ---------- 放货时段 / 优先通道 / 限流 ----------
+const sched = await import('../src/scheduler.js');
+const bj = (h, m=0) => Date.UTC(2026, 8, 30, h - 8, m); // 北京时间 → 时间戳
+
+test('放货时段按北京时间判断，06:00 进入、09:00 退出，与机器时区无关',()=>{
+  const start=sched.parseHHMM('06:00'),end=sched.parseHHMM('09:00');
+  assert.equal(sched.inWindow(bj(5,59),start,end),false);
+  assert.equal(sched.inWindow(bj(6,0),start,end),true);
+  assert.equal(sched.inWindow(bj(8,59),start,end),true);
+  assert.equal(sched.inWindow(bj(9,0),start,end),false);
+  assert.equal(sched.msUntilWindowEdge(bj(5,30),start,end),30*60_000,'5:30 → 半小时后进入');
+  assert.equal(sched.msUntilWindowEdge(bj(8,0),start,end),60*60_000,'8:00 → 一小时后退出');
+  assert.equal(sched.msUntilWindowEdge(bj(10,0),start,end),20*3600_000,'10:00 → 次日 6:00');
+  // 跨零点
+  assert.equal(sched.inWindow(bj(23),sched.parseHHMM('22:00'),sched.parseHHMM('02:00')),true);
+  assert.equal(sched.inWindow(bj(3),sched.parseHHMM('22:00'),sched.parseHHMM('02:00')),false);
+  assert.equal(sched.parseHHMM('25:00'),null);
+});
+
+test('轮询计划：放货时段用高速间隔，关闭后始终常规',()=>{
+  const c={rushEnabled:true,rushStart:'06:00',rushEnd:'09:00',intervalSeconds:60,hkIntervalSeconds:5,priorityIntervalSeconds:20,
+    rushPollIntervalSeconds:15,rushHkIntervalSeconds:3,rushPriorityIntervalSeconds:8};
+  assert.deepEqual(sched.pollPlan(c,bj(7)),{rush:true,intervals:{CN:15000,HK:3000,PRI:8000}});
+  assert.deepEqual(sched.pollPlan(c,bj(10)),{rush:false,intervals:{CN:60000,HK:5000,PRI:20000}});
+  assert.equal(sched.pollPlan({...c,rushEnabled:false},bj(7)).rush,false);
+  assert.equal(sched.throttleBackoffMs(1),60_000);assert.equal(sched.throttleBackoffMs(2),120_000);
+  assert.equal(sched.throttleBackoffMs(9),300_000,'最长 5 分钟');
+});
+
+const cnCfg={...cfg,watchRegions:['CN'],watchStores:['R401','R320'],priorityStore:'R401',priorityStoreRegion:'CN',
+  priorityStoreFor:{CN:'R401'}};
+const twoProducts=[{...product,key:'A',parts:{CN:'AAA1CH/A'}},{...product,key:'B',parts:{CN:'BBB1CH/A'}}];
+function cnSessions(client, handler) {
+  const seen=[];
+  for (const city of ['CN:上海','CN:北京']) {
+    const s=client.session('CN',city);
+    s.ready=true;s.createdAt=Date.now();s.warmedKey=city;s.setLocation=async()=>{};s.warmUp=async()=>true;
+    s.queryParts=async(parts)=>{seen.push([city,parts]);return handler(city,parts);};
+  }
+  return seen;
+}
+
+test('优先通道只查优先门店所在城市的优先机型；未覆盖的城市不下「无货」结论',async()=>{
+  const client=new ApplePickupClient({...cnCfg,products:twoProducts},()=>{});
+  const seen=cnSessions(client,(city,parts)=>parts.map(p=>p===REGIONS.CN.canaryPart?{...item(p,1),eligibleStores:'R401'}:item(p,0)));
+  const scope=client.priorityScope(['B']);
+  assert.deepEqual(scope.keys,['B']);assert.equal(scope.city,'CN:上海');assert.deepEqual(scope.stores,['R401']);
+  const rows=await client.checkPriority(['B']);
+  assert.equal(seen.length,1,'只请求一个城市');assert.equal(seen[0][0],'CN:上海');
+  assert.ok(seen[0][1].includes('BBB1CH/A')&&!seen[0][1].includes('AAA1CH/A'),'只查优先机型');
+  assert.equal(rows.length,1);assert.equal(rows[0].complete,false,'北京没查，不算完整');
+  assert.equal(rows[0].availability,'unknown');
+  // 没标优先机型 → 全部机型
+  assert.deepEqual(client.priorityScope([]).keys,['A','B']);
+});
+
+test('优先通道：优先门店有货立即发急件；无货（不完整）不会发售罄',async()=>{
+  const client=new ApplePickupClient({...cnCfg,products:twoProducts},()=>{});
+  let stock='R401,R320';
+  cnSessions(client,(city,parts)=>parts.map(p=>({...item(p,stock?2:0),eligibleStores:stock})));
+  const c={...cnCfg,soldOutNotify:true};const state={parts:{}};
+  let rows=await client.checkPriority(['A']);
+  assert.deepEqual(rows[0].stores,['R401'],'北京门店不在本通道范围内，不计入');
+  let plan=decideAlerts(rows,state,c);assert.equal(plan.priorityItems.length,1);
+  acknowledgeAlerts(planItems(plan),state);
+  stock='';rows=await client.checkPriority(['A']);
+  plan=decideAlerts(rows,state,c);assert.equal(planItems(plan).length,0,'局部数据不能下售罄结论');
+  assert.equal(state.parts.A.role,'priority');
+});
+
+test('展示合并：优先通道只替换覆盖范围内的门店，其他城市沿用完整结果',async()=>{
+  const client=new ApplePickupClient({...cnCfg,products:twoProducts},()=>{});
+  cnSessions(client,(city,parts)=>parts.map(p=>({...item(p,1),eligibleStores:city==='CN:上海'?'R401':'R320'})));
+  const [full]=await client.checkAvailability();
+  assert.deepEqual(new Set(full.stores),new Set(['R401','R320']));
+  cnSessions(client,(city,parts)=>parts.map(p=>p===REGIONS.CN.canaryPart?{...item(p,1),eligibleStores:'R401'}:item(p,0)));
+  const [lane]=await client.checkPriority(['A']);
+  const merged=client.mergeLaneRow(full,lane);
+  assert.deepEqual(merged.stores,['R320'],'上海的新数据（无货）替换，北京沿用');
+  assert.equal(merged.atPriority,false);assert.equal(merged.complete,true);assert.equal(merged.perRegion.CN.ok,true);
+});
+
+test('Apple 限流（429）：本轮不重试，地区进入冷却，成功后清零',async()=>{
+  const {client,s}=mockSession();let calls=0;
+  s.request=async()=>{calls++;const e=new Error('HK：Apple 限制了查询频率 (HTTP 429)');e.throttled=true;throw e;};
+  const [r]=await client.checkAvailability();
+  assert.equal(r.availability,'unknown');assert.match(r.perRegion.HK.error,/限制了查询频率.*暂停/);
+  assert.equal(calls,1,'限流时不在本轮反复重试');
+  assert.ok(client.cooldownUntil('HK')>Date.now()+50_000);
+  s.ready=true;s.request=undefined;delete s.request;
+  s.queryParts=async(parts)=>parts.map(p=>item(p,1));
+  await client.checkAvailability();
+  assert.equal(client.cooldownUntil('HK'),0,'成功一次即解除冷却');
+});

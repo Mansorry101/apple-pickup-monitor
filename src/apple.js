@@ -24,22 +24,34 @@
  */
 import { scopeProductsByStores } from './settings.js';
 import { REGIONS, STORE_BY_ID, storeLabel, CITY_KEY, CITY_BY_KEY } from './stores.js';
+import { throttleBackoffMs } from './scheduler.js';
 
 export { storeLabel };
 
 const MAX_PARTS_PER_REQUEST = 12; // 接口实测可用 12，减少机型较多时的分批请求
 const CITY_QUERY_CONCURRENCY = 3;
+const BATCH_CONCURRENCY = 2; // 同一城市会话内的分批请求并发数（机型 > 11 个时才有多批）
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * 限并发执行。任一项失败后不再派发新任务，但会等已发出的请求全部结束再抛出第一个错误，
+ * 避免重试时旧请求还在同一个会话上跑。
+ */
 async function mapLimit(items, limit, fn) {
   const results = new Array(items.length);
   let next = 0;
+  let failure = null;
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
+    while (!failure && next < items.length) {
       const index = next++;
-      results[index] = await fn(items[index], index);
+      try {
+        results[index] = await fn(items[index], index);
+      } catch (e) {
+        failure ||= { error: e };
+      }
     }
   }));
+  if (failure) throw failure.error;
   return results;
 }
 
@@ -95,6 +107,12 @@ class RegionSession {
       if (referer) headers.Referer = referer;
       const res = await fetch(url, { headers, redirect: 'follow', signal: controller.signal });
       this.jar.absorb(res);
+      // 429 / 503：Apple 在限制请求频率。直接报限流，不在本轮里继续重试加重限制。
+      if (res.status === 429 || res.status === 503) {
+        const err = new Error(`${this.R.label}：Apple 限制了查询频率 (HTTP ${res.status})`);
+        err.throttled = true;
+        throw err;
+      }
       return { status: res.status, text: await res.text() };
     } finally {
       clearTimeout(timer);
@@ -210,6 +228,39 @@ export class ApplePickupClient {
     this.cfg = { ...cfg, products: scopeProductsByStores(cfg.products, cfg.watchStores) };
     this.log = log;
     this.sessions = new Map();
+    this.regionLocks = new Map();   // 地区 → 该地区最后一个排队任务
+    this.lastRegionData = new Map(); // 地区 → { at, data }，供其他地区的轮次拼完整快照
+    this.throttle = new Map();       // 地区 → { hits, until }：被限流后的冷却
+  }
+
+  /** 该地区的限流冷却结束时间（毫秒时间戳），未限流返回 0。 */
+  cooldownUntil(regionId) {
+    const t = this.throttle.get(regionId);
+    return t && t.until > Date.now() ? t.until : 0;
+  }
+
+  /** 加锁执行一次地区查询，并记录限流冷却（连续限流指数退避，成功一次即清零）。 */
+  async runRegion(regionId, fn) {
+    try {
+      const out = await this.withRegionLock(regionId, fn);
+      this.throttle.delete(regionId);
+      return out;
+    } catch (e) {
+      if (e.throttled) {
+        const hits = (this.throttle.get(regionId)?.hits || 0) + 1;
+        const ms = throttleBackoffMs(hits);
+        this.throttle.set(regionId, { hits, until: Date.now() + ms });
+        e.message += `，暂停该地区查询 ${Math.round(ms / 1000)} 秒`;
+      }
+      throw e;
+    }
+  }
+
+  /** 同一地区的查询串行（会共用城市会话与定位），不同地区互不等待。 */
+  withRegionLock(regionId, fn) {
+    const task = (this.regionLocks.get(regionId) || Promise.resolve()).then(fn);
+    this.regionLocks.set(regionId, task.catch(() => {}));
+    return task;
   }
 
   session(regionId, locationKey = '') {
@@ -247,62 +298,75 @@ export class ApplePickupClient {
    * 对外主方法：查询所有目标机型在所有监控门店的库存。
    * 会自动建会话 / 定位 / 热身 / 重试，只有拿到可信数据才算数。
    */
-  // 同一客户端的手动检查和自动轮询排队，避免交错修改城市定位。
+  // 同一地区的手动检查和自动轮询排队（避免交错修改城市定位），不同地区并行、互不阻塞。
   checkAvailability(options = {}) {
-    const task = (this.checkQueue || Promise.resolve()).then(() => this.collectAvailability(options));
-    this.checkQueue = task.catch(() => {});
-    return task;
+    return this.collectAvailability(options);
   }
 
-  async collectAvailability({ onUpdate, only } = {}) {
+  /**
+   * @param onUpdate      每个地区出结果后回调一次（按顺序调用）
+   * @param only          本轮只查这几个地区（各地区间隔不同，香港会查得更频繁）
+   * @param reuseMaxAgeMs 本轮不查的地区：若其最近一次结果不早于「本轮开始 - reuseMaxAgeMs」，
+   *                      直接并入快照（否则标成 pending）。默认不复用。
+   */
+  async collectAvailability({ onUpdate, only, reuseMaxAgeMs = 0 } = {}) {
     const active = this.activeRegions();
-    // only：本轮只查这几个地区（各地区间隔不同，香港会查得更频繁）
     const regions = Array.isArray(only) && only.length ? active.filter((r) => only.includes(r)) : active;
     if (!regions.length) throw new Error('没有可查询的地区：请检查监控门店与监控机型');
     const products = this.cfg.products;
-    const acc = new Map(products.map((p) => [p.key, { stores: new Set(), perRegion: {} }]));
-    for (const p of products) for (const r of active) {
-      if (!p.parts[r]) continue;
-      // 本轮不查的地区标成 pending：界面上写「等待下一轮」，
-      // 而且它的 ok 是 false，complete 因此为 false —— 拿不到新数据时
-      // 就不会用旧数据下「已售罄」的结论。
-      acc.get(p.key).perRegion[r] = regions.includes(r)
-        ? { partNumber: p.parts[r], stores: [], ok: false, error: '查询尚未完成' }
-        : { partNumber: p.parts[r], stores: [], ok: false, pending: true, error: '本轮未查询' };
-    }
+    const startedAt = Date.now();
+    const startSeq = this.regionSeq || 0;
+
+    // 快照总是取每个地区「最新的」结果：并行的轮次交替回调时，旧数据不会覆盖新数据。
+    const snapshot = () => products.map((p) => {
+      const acc = { stores: new Set(), perRegion: {} };
+      for (const r of active) {
+        if (!p.parts[r]) continue;
+        const entry = this.lastRegionData.get(r);
+        const fresh = entry && (regions.includes(r)
+          ? entry.seq > startSeq
+          : reuseMaxAgeMs > 0 && entry.at >= startedAt - reuseMaxAgeMs);
+        const d = fresh ? entry.data[p.key] : null;
+        if (d) {
+          acc.perRegion[r] = d;
+          if (d.ok !== false) for (const s of d.stores) if (STORE_BY_ID[s]?.region === r) acc.stores.add(s);
+        } else {
+          // 本轮不查的地区标成 pending：界面上写「等待下一轮」，
+          // 而且它的 ok 是 false，complete 因此为 false —— 拿不到新数据时
+          // 就不会用旧数据下「已售罄」的结论。
+          acc.perRegion[r] = regions.includes(r)
+            ? { partNumber: p.parts[r], stores: [], ok: false, inProgress: true, error: '查询尚未完成' }
+            : { partNumber: p.parts[r], stores: [], ok: false, pending: true, error: '本轮未查询' };
+        }
+      }
+      return this.normalize(p, acc);
+    });
+
     let updates = Promise.resolve();
     // 每个地区有独立会话；最多大陆、香港两个并发查询。
     await Promise.all(regions.map(async (regionId) => {
       let regionData;
       try {
-        regionData = await this.checkRegion(regionId, products);
+        regionData = await this.runRegion(regionId, () => this.checkRegion(regionId, products));
       } catch (e) {
         this.log('[地区:' + regionId + '] 查询失败: ' + e.message);
         regionData = Object.fromEntries(products.filter((p) => p.parts[regionId]).map((p) =>
           [p.key, { partNumber: p.parts[regionId], stores: [], ok: false, error: e.message }]));
       }
-      for (const p of products) {
-        const d = regionData[p.key];
-        if (!d) continue;
-        const a = acc.get(p.key);
-        if (d.ok !== false) for (const store of d.stores) {
-          if (STORE_BY_ID[store]?.region === regionId) a.stores.add(store);
-        }
-        a.perRegion[regionId] = d;
-      }
+      this.regionSeq = (this.regionSeq || 0) + 1;
+      this.lastRegionData.set(regionId, { seq: this.regionSeq, at: Date.now(), data: regionData });
       if (onUpdate) {
-        const snapshot = products.map((p) => this.normalize(p, acc.get(p.key)));
-        updates = updates.then(() => onUpdate(snapshot));
+        updates = updates.then(() => onUpdate(snapshot()));
         // 立即观察拒绝，等所有地区结束后再向调用方传播。
         updates.catch(() => {});
       }
     }));
     await updates;
-    return products.map((p) => this.normalize(p, acc.get(p.key)));
+    return snapshot();
   }
 
   /** 查一个地区：必要时按城市逐个提交定位 */
-  async checkRegion(regionId, products) {
+  async checkRegion(regionId, products, { cities } = {}) {
     const R = REGIONS[regionId];
     const wanted = products.filter((p) => p.parts?.[regionId]);
     if (!wanted.length) return {};
@@ -321,101 +385,228 @@ export class ApplePickupClient {
         if (c) byKey.set(c.key, c);
       }
       cityPasses = byKey.size ? [...byKey.values()] : [];
+      if (cities) cityPasses = cityPasses.filter((c) => cities.includes(c.key));
       if (!cityPasses.length) {
         throw new Error(`${R.label}：没有可用的城市定位信息（无法查询门店库存）`);
       }
     }
 
     const parts = wanted.map((p) => p.parts[regionId]);
-    let lastError = null;
+    const uniqueParts = [...new Set(parts)];
+    const targetParts = new Set(parts);
+    const chunks = [];
+    for (let i = 0; i < uniqueParts.length; i += MAX_PARTS_PER_REQUEST - 1) {
+      chunks.push([...new Set([R.canaryPart, ...uniqueParts.slice(i, i + MAX_PARTS_PER_REQUEST - 1)])]);
+    }
 
-    for (let attempt = 1; attempt <= this.cfg.maxRetries; attempt++) {
-      // 每次尝试独立汇总，不继承失败尝试的门店或送达日期。
-      const perCity = cityPasses.map(() => new Map());
-      const delivery = {};
+    /** 查一个城市（香港为 null）：返回 { stores: Map<料号, Set<门店>>, delivery: {料号: 日期} } */
+    const queryCity = async (city) => {
+      // 大陆会话固定到单个城市，定位与热身结果可跨轮询复用。
+      const sess = this.session(regionId, city?.key || '');
       try {
-        await mapLimit(cityPasses, CITY_QUERY_CONCURRENCY, async (city, ci) => {
-          // 大陆会话固定到单个城市，定位与热身结果可跨轮询复用。
-          const sess = this.session(regionId, city?.key || '');
-          try {
-            const stale = !sess.ready || Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
-            if (stale) {
-              sess.jar.clear();
-              await sess.ensureSession();
-            }
-            if (city) await sess.setLocation(city);
+        const stale = !sess.ready || Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
+        if (stale) {
+          sess.jar.clear();
+          await sess.ensureSession();
+        }
+        if (city) await sess.setLocation(city);
 
-            // 会话刚建立、或刚换过定位时，第一次查询常常返回空数据。
-            // 每个城市复用独立会话，热身仅在会话首次建立时执行。
-            const warmKey = city ? city.key : '';
-            if (sess.warmedKey !== warmKey) {
-              const warm = await sess.warmUp();
-              if (!warm) throw new Error(`${R.label}：热身失败（${city ? city.city : '默认'}）`);
-              sess.warmedKey = warmKey;
-            }
+        // 会话刚建立、或刚换过定位时，第一次查询常常返回空数据。
+        // 每个城市复用独立会话，热身仅在会话首次建立时执行。
+        const warmKey = city ? city.key : '';
+        if (sess.warmedKey !== warmKey) {
+          const warm = await sess.warmUp();
+          if (!warm) throw new Error(`${R.label}：热身失败（${city ? city.city : '默认'}）`);
+          sess.warmedKey = warmKey;
+        }
 
-            const uniqueParts = [...new Set(parts)];
-            const raw = [];
-            for (let i = 0; i < uniqueParts.length; i += MAX_PARTS_PER_REQUEST - 1) {
-              const chunk = [...new Set([R.canaryPart, ...uniqueParts.slice(i, i + MAX_PARTS_PER_REQUEST - 1)])];
-              const content = await sess.queryParts(chunk, store);
-              if (!Array.isArray(content) || !sess.isHealthy(content)) {
-                throw new Error(R.label + '：本批哨兵无数据，库存未知');
-              }
-              for (const pn of chunk) {
-                const matches = content.filter((item) => item?.partNumber === pn);
-                if (matches.length !== 1) throw new Error(R.label + '：库存响应缺失或重复料号 ' + pn);
-                const item = matches[0];
-                const count = item.partAvailableStoresCount;
-                if (count === null || count === undefined || (typeof count === 'string' && !count.trim()) ||
-                    !['number', 'string'].includes(typeof count) || !Number.isInteger(Number(count)) || Number(count) < 0 ||
-                    (Number(count) > 0 && (typeof item.eligibleStores !== 'string' || !storesOf(item).length)) ||
-                    (Number(count) === 0 && String(item.eligibleStores || '').trim())) {
-                  throw new Error(R.label + '：库存字段不完整或矛盾 ' + pn);
-                }
-              }
-              raw.push(...content);
-            }
-
-            const m = perCity[ci];
-            const targetParts = new Set(parts);
-            for (const item of raw) {
-              // 只收监控目标；哨兵是额外塞进去做健康检查的。
-              if (!targetParts.has(item.partNumber)) continue;
-              m.set(item.partNumber, new Set(storesOf(item)));
-              const d = item.deliveryMessage?.deliveryOptions?.[0]?.date;
-              if (d) delivery[item.partNumber] = d;
-            }
-          } catch (e) {
-            sess.ready = false;
-            throw e;
+        // 机型较多时分批：各批独立带哨兵、独立校验，可以并发发出。
+        const contents = await mapLimit(chunks, BATCH_CONCURRENCY, async (chunk) => {
+          const content = await sess.queryParts(chunk, store);
+          if (!Array.isArray(content) || !sess.isHealthy(content)) {
+            throw new Error(R.label + '：本批哨兵无数据，库存未知');
           }
+          for (const pn of chunk) {
+            const matches = content.filter((item) => item?.partNumber === pn);
+            if (matches.length !== 1) throw new Error(R.label + '：库存响应缺失或重复料号 ' + pn);
+            const item = matches[0];
+            const count = item.partAvailableStoresCount;
+            if (count === null || count === undefined || (typeof count === 'string' && !count.trim()) ||
+                !['number', 'string'].includes(typeof count) || !Number.isInteger(Number(count)) || Number(count) < 0 ||
+                (Number(count) > 0 && (typeof item.eligibleStores !== 'string' || !storesOf(item).length)) ||
+                (Number(count) === 0 && String(item.eligibleStores || '').trim())) {
+              throw new Error(R.label + '：库存字段不完整或矛盾 ' + pn);
+            }
+          }
+          return content;
         });
 
-        // 汇总：每个目标在这几个城市的并集
-        const out = {};
-        for (const p of wanted) {
-          const pn = p.parts[regionId];
-          const set = new Set();
-          for (const m of perCity) for (const s of m.get(pn) || []) set.add(s);
-          out[p.key] = {
-            region: regionId,
-            partNumber: pn,
-            stores: [...set],
-            deliveryDate: delivery[pn] || null,
-            ok: true,
-          };
+        const stores = new Map();
+        const delivery = {};
+        for (const item of contents.flat()) {
+          // 只收监控目标；哨兵是额外塞进去做健康检查的。
+          if (!targetParts.has(item.partNumber)) continue;
+          stores.set(item.partNumber, new Set(storesOf(item)));
+          const d = item.deliveryMessage?.deliveryOptions?.[0]?.date;
+          if (d) delivery[item.partNumber] = d;
         }
-        return out;
+        return { stores, delivery };
       } catch (e) {
-        lastError = e;
-        this.log(`[重试:${R.short}] 第 ${attempt}/${this.cfg.maxRetries} 次失败: ${e.message}`);
-        for (const city of cityPasses) this.session(regionId, city?.key || '').ready = false;
-        if (attempt === this.cfg.maxRetries) throw e;
-        await sleep(Math.min(1500 * attempt, 10_000));
+        // 只作废出错的这个城市会话，其他城市的定位 / 热身继续复用。
+        sess.ready = false;
+        throw e;
       }
+    };
+
+    // 每个城市的结果只在该城市全部批次校验通过后才记下；
+    // 重试时只重查失败的城市，已成功城市不再重建会话、重新定位和热身。
+    const perCity = cityPasses.map(() => null);
+    let lastError = null;
+    for (let attempt = 1; attempt <= this.cfg.maxRetries; attempt++) {
+      const todo = cityPasses.map((c, i) => i).filter((i) => !perCity[i]);
+      const errors = [];
+      await mapLimit(todo, CITY_QUERY_CONCURRENCY, async (ci) => {
+        try {
+          perCity[ci] = await queryCity(cityPasses[ci]);
+        } catch (e) {
+          errors.push(e);
+        }
+      });
+      if (!errors.length) break;
+      lastError = errors.find((e) => e.throttled) || errors[0];
+      if (lastError.throttled) throw lastError;
+      const failed = cityPasses.length - perCity.filter(Boolean).length;
+      this.log(`[重试:${R.short}] 第 ${attempt}/${this.cfg.maxRetries} 次失败（${failed}/${cityPasses.length} 个查询点）: ${lastError.message}`);
+      if (attempt === this.cfg.maxRetries) throw lastError;
+      await sleep(Math.min(1500 * attempt, 10_000));
     }
-    throw lastError || new Error(`${R.label}：多次重试后仍未取得可信库存数据`);
+    if (perCity.some((c) => !c)) throw lastError || new Error(`${R.label}：多次重试后仍未取得可信库存数据`);
+
+    // 汇总：每个目标在这几个城市的并集，只保留用户选中的门店
+    // （Apple 会连带返回定位点附近的其他门店，例如定位上海会带出苏州 / 杭州，一律丢弃）；
+    // 送达日期按城市顺序取第一个
+    const watchedSet = new Set(watched);
+    const out = {};
+    for (const p of wanted) {
+      const pn = p.parts[regionId];
+      const set = new Set();
+      for (const c of perCity) for (const s of c.stores.get(pn) || []) if (watchedSet.has(s)) set.add(s);
+      out[p.key] = {
+        region: regionId,
+        partNumber: pn,
+        stores: [...set],
+        deliveryDate: perCity.map((c) => c.delivery[pn]).find(Boolean) || null,
+        ok: true,
+      };
+    }
+    return out;
+  }
+
+  /**
+   * 优先通道的查询范围：优先门店所在地区 / 城市 + 优先机型。
+   * @param priorityKeys 标了「优先」的机型 key；为空时视为全部机型
+   * @returns {{ region, city, stores, keys, coversRegion } | null}
+   */
+  priorityScope(priorityKeys = []) {
+    const store = STORE_BY_ID[this.cfg.priorityStore];
+    const R = store && REGIONS[store.region];
+    if (!R?.onlineStore) return null;
+    const region = store.region;
+    const inRegion = this.cfg.products.filter((p) => p.parts?.[region]);
+    const starred = inRegion.filter((p) => priorityKeys.includes(p.key));
+    const keys = (starred.length ? starred : inRegion).map((p) => p.key);
+    if (!keys.length) return null;
+    const cityKey = R.needsLocation ? CITY_KEY(region, store.city) : null;
+    const watched = this.watchedStoresIn(region);
+    // 本通道能确认的门店：香港一次请求覆盖全港；大陆只算优先门店所在城市
+    const stores = cityKey ? watched.filter((id) => CITY_KEY(region, STORE_BY_ID[id].city) === cityKey) : watched;
+    return { region, city: cityKey, stores, keys, coversRegion: stores.length === watched.length };
+  }
+
+  /**
+   * 优先通道：只查优先门店所在城市的优先机型。
+   * 返回的行只包含这些机型；没覆盖到的门店不下「无货」结论（complete=false）。
+   */
+  async checkPriority(priorityKeys = []) {
+    const scope = this.priorityScope(priorityKeys);
+    if (!scope) throw new Error('没有可用的优先通道（优先门店所在地区没有监控机型）');
+    const { region } = scope;
+    const products = this.cfg.products.filter((p) => scope.keys.includes(p.key));
+    const inScope = new Set(scope.stores);
+    let regionData;
+    try {
+      regionData = await this.runRegion(region, () =>
+        this.checkRegion(region, products, scope.city ? { cities: [scope.city] } : {}));
+    } catch (e) {
+      this.log('[优先通道:' + region + '] 查询失败: ' + e.message);
+      regionData = Object.fromEntries(products.map((p) =>
+        [p.key, { partNumber: p.parts[region], stores: [], ok: false, error: e.message }]));
+    }
+    return products.map((p) => {
+      const d = regionData[p.key];
+      const acc = { stores: new Set(), perRegion: {} };
+      if (d) {
+        // 定位带出的其他城市门店不算：那些城市不在本通道的确认范围内
+        const stores = d.ok === false ? [] : d.stores.filter((s) => inScope.has(s));
+        acc.perRegion[region] = { ...d, stores };
+        for (const s of stores) acc.stores.add(s);
+      }
+      // 其他地区本通道不查
+      for (const r of Object.keys(p.parts || {})) {
+        if (r !== region) acc.perRegion[r] = { partNumber: p.parts[r], stores: [], ok: false, pending: true, error: '本轮未查询' };
+      }
+      const row = this.normalize(p, acc);
+      if (!scope.coversRegion && row.complete) {
+        row.complete = false;
+        if (!row.stores.length) row.availability = 'unknown';
+      }
+      row.lane = 'priority';
+      row.scopeStores = scope.stores;
+      row.scopeRegion = region;
+      return row;
+    });
+  }
+
+  /**
+   * 界面展示用：把优先通道的新结果并入上一次的完整结果。
+   * 通道覆盖范围内的门店用新数据，范围外的门店沿用完整结果。
+   */
+  mergeLaneRow(full, lane) {
+    if (!full) return lane;
+    const region = lane.scopeRegion;
+    const scope = new Set(lane.scopeStores || []);
+    const laneRegion = lane.perRegion?.[region];
+    const fullRegion = full.perRegion?.[region];
+    const inRegion = (id) => STORE_BY_ID[id]?.region === region;
+    const outside = (full.stores || []).filter((id) => inRegion(id) && !scope.has(id));
+    const regionStores = [...new Set([...(laneRegion?.stores || []), ...outside])];
+    const stores = [...(full.stores || []).filter((id) => !inRegion(id)), ...regionStores];
+    stores.sort((a, b) => (a === this.cfg.priorityStore ? -1 : b === this.cfg.priorityStore ? 1 : 0));
+    const covers = scope.size === this.watchedStoresIn(region).length;
+    const perRegion = { ...full.perRegion };
+    if (laneRegion) {
+      const known = laneRegion.ok && (covers || fullRegion?.ok);
+      perRegion[region] = {
+        ...laneRegion,
+        stores: regionStores,
+        ok: Boolean(known),
+        pending: !known && laneRegion.ok ? Boolean(fullRegion?.pending) : false,
+        error: known ? null : laneRegion.error || fullRegion?.error || null,
+      };
+    }
+    const regional = Object.values(perRegion);
+    const complete = regional.length > 0 && regional.every((d) => d.ok);
+    return {
+      ...full,
+      stores,
+      count: stores.length,
+      atPriority: stores.includes(this.cfg.priorityStore),
+      perRegion,
+      ok: regional.some((d) => d.ok),
+      complete,
+      availability: stores.length ? 'available' : complete ? 'unavailable' : 'unknown',
+      priorityKnown: lane.priorityKnown || full.priorityKnown,
+    };
   }
 
   /** 把原始结果整理成我们自己的结构 */
@@ -425,17 +616,16 @@ export class ApplePickupClient {
     // 优先门店排在最前面
     stores.sort((a, b) => (a === this.cfg.priorityStore ? -1 : b === this.cfg.priorityStore ? 1 : 0));
 
-    const allEligible = new Set();
     const perRegion = {};
     for (const [r, d] of Object.entries(data?.perRegion || {})) {
       perRegion[r] = {
         partNumber: d.partNumber,
-        stores: [...d.stores],
+        stores: d.stores.filter((s) => watched.includes(s)),
         ok: d.ok !== false,
         error: d.error || null,
         pending: Boolean(d.pending),
+        inProgress: Boolean(d.inProgress),
       };
-      for (const s of d.stores) allEligible.add(s);
     }
 
     const deliveryDates = {};
@@ -457,8 +647,6 @@ export class ApplePickupClient {
       priorityKnown: !product.parts?.[priorityRegion] || Boolean(perRegion[priorityRegion]?.ok),
       count: stores.length,
       stores,
-      // Apple 报出来、但我们没在监控的门店（用于提示"附近还有别的店有货"）
-      otherStores: [...allEligible].filter((s) => !watched.includes(s)),
       atPriority: stores.includes(this.cfg.priorityStore),
       perRegion,
       deliveryDates,

@@ -1,6 +1,6 @@
 {
   "name": "apple-pickup-monitor",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "description": "监控中国大陆 / 香港 Apple Store 门市取货库存（任意机型 / 容量 / 颜色 / 门店），有货时邮件通知",
