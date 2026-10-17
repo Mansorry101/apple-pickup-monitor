@@ -34,6 +34,12 @@ const BATCH_CONCURRENCY = 2; // 同一城市会话内的分批请求并发数（
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * 深圳快车道针对的城市。大陆城市必须先提交定位，所以深圳不能像香港那样「一次请求出全地区结果」，
+ * 但只查这一个城市（3 家门店）的代价很小 —— 于是给它一条和香港同级的独立快车道。
+ */
+const SZ_CITY = '深圳';
+
+/**
  * 限并发执行。任一项失败后不再派发新任务，但会等已发出的请求全部结束再抛出第一个错误，
  * 避免重试时旧请求还在同一个会话上跑。
  */
@@ -305,17 +311,30 @@ export class ApplePickupClient {
 
   /**
    * @param onUpdate      每个地区出结果后回调一次（按顺序调用）
-   * @param only          本轮只查这几个地区（各地区间隔不同，香港会查得更频繁）
+   * @param only          本轮只查这几个地区（各地区间隔不同，香港 / 深圳会查得更频繁）
+   * @param cities        只查这些城市（地区 → 城市 key 数组）。城市级快车道（深圳 / 优先通道）
+   *                      只确认自己覆盖范围内的门店，本地缓存也只对范围内的门店算「最新」。
    * @param reuseMaxAgeMs 本轮不查的地区：若其最近一次结果不早于「本轮开始 - reuseMaxAgeMs」，
    *                      直接并入快照（否则标成 pending）。默认不复用。
    */
-  async collectAvailability({ onUpdate, only, reuseMaxAgeMs = 0 } = {}) {
+  async collectAvailability({ onUpdate, only, cities, reuseMaxAgeMs = 0 } = {}) {
     const active = this.activeRegions();
     const regions = Array.isArray(only) && only.length ? active.filter((r) => only.includes(r)) : active;
     if (!regions.length) throw new Error('没有可查询的地区：请检查监控门店与监控机型');
     const products = this.cfg.products;
     const startedAt = Date.now();
     const startSeq = this.regionSeq || 0;
+
+    /** 本轮实际确认了哪些门店（城市级通道只覆盖自己那个城市，不能用整个地区的监控列表冒充） */
+    const queryScopeOf = (regionId) => this.scopedWatchedStores(regionId, cities?.[regionId]);
+
+    /** 本地缓存是否覆盖这个地区本轮该确认的门店（城市级通道只覆盖自己那个城市） */
+    const cachedCovers = (entry, regionId) => {
+      if (!entry) return false;
+      const all = this.watchedStoresIn(regionId);
+      const scope = entry.scope;
+      return !scope || scope.length >= all.length;
+    };
 
     // 快照总是取每个地区「最新的」结果：并行的轮次交替回调时，旧数据不会覆盖新数据。
     const snapshot = () => products.map((p) => {
@@ -325,7 +344,7 @@ export class ApplePickupClient {
         const entry = this.lastRegionData.get(r);
         const fresh = entry && (regions.includes(r)
           ? entry.seq > startSeq
-          : reuseMaxAgeMs > 0 && entry.at >= startedAt - reuseMaxAgeMs);
+          : reuseMaxAgeMs > 0 && entry.at >= startedAt - reuseMaxAgeMs && cachedCovers(entry, r));
         const d = fresh ? entry.data[p.key] : null;
         if (d) {
           acc.perRegion[r] = d;
@@ -347,14 +366,20 @@ export class ApplePickupClient {
     await Promise.all(regions.map(async (regionId) => {
       let regionData;
       try {
-        regionData = await this.runRegion(regionId, () => this.checkRegion(regionId, products));
+        regionData = await this.runRegion(regionId, () =>
+          this.checkRegion(regionId, products, { cities: cities?.[regionId] }));
       } catch (e) {
         this.log('[地区:' + regionId + '] 查询失败: ' + e.message);
         regionData = Object.fromEntries(products.filter((p) => p.parts[regionId]).map((p) =>
           [p.key, { partNumber: p.parts[regionId], stores: [], ok: false, error: e.message }]));
       }
       this.regionSeq = (this.regionSeq || 0) + 1;
-      this.lastRegionData.set(regionId, { seq: this.regionSeq, at: Date.now(), data: regionData });
+      this.lastRegionData.set(regionId, {
+        seq: this.regionSeq,
+        at: Date.now(),
+        data: regionData,
+        scope: queryScopeOf(regionId),
+      });
       if (onUpdate) {
         updates = updates.then(() => onUpdate(snapshot()));
         // 立即观察拒绝，等所有地区结束后再向调用方传播。
@@ -365,14 +390,30 @@ export class ApplePickupClient {
     return snapshot();
   }
 
+  /**
+   * 这个地区里「本轮要确认」的监控门店：给了城市就只算那些城市的门店。
+   * 城市级快车道（深圳 / 优先通道）只覆盖自己那个城市，
+   * 所以它的结果不能被当成整个地区的结论，本地缓存的范围也要按这个算。
+   */
+  scopedWatchedStores(regionId, cityKeys) {
+    const watched = this.watchedStoresIn(regionId);
+    if (!Array.isArray(cityKeys) || !cityKeys.length) return watched;
+    return watched.filter((id) => cityKeys.includes(CITY_KEY(regionId, STORE_BY_ID[id].city)));
+  }
+
   /** 查一个地区：必要时按城市逐个提交定位 */
-  async checkRegion(regionId, products, { cities } = {}) {
+  async checkRegion(regionId, products, { cities, stores } = {}) {
     const R = REGIONS[regionId];
     const wanted = products.filter((p) => p.parts?.[regionId]);
     if (!wanted.length) return {};
 
-    const watched = this.watchedStoresIn(regionId);
-    const store = this.cfg.priorityStoreFor?.[regionId] || watched[0] || this.cfg.defaultStoreFor?.[regionId] || '';
+    // 城市级通道（深圳 / 优先通道）只覆盖自己那个城市：范围内的门店才参与查询与结论，
+    // 范围外的门店交给完整轮次，绝不用局部数据替它们下「无货」结论。
+    const watched = this.scopedWatchedStores(regionId, cities).filter((id) => !stores || stores.includes(id));
+    // 触发器门店优先用本轮覆盖范围内的优先门店（接口要求带 store 参数才会返回门店数据）
+    const store = watched.includes(this.cfg.priorityStoreFor?.[regionId])
+      ? this.cfg.priorityStoreFor[regionId]
+      : watched[0] || this.cfg.defaultStoreFor?.[regionId] || '';
 
     // 需要提交定位的城市（大陆）；香港不需要
     let cityPasses = [null];
@@ -394,6 +435,7 @@ export class ApplePickupClient {
     const parts = wanted.map((p) => p.parts[regionId]);
     const uniqueParts = [...new Set(parts)];
     const targetParts = new Set(parts);
+    const watchedSet = new Set(watched);
     const chunks = [];
     for (let i = 0; i < uniqueParts.length; i += MAX_PARTS_PER_REQUEST - 1) {
       chunks.push([...new Set([R.canaryPart, ...uniqueParts.slice(i, i + MAX_PARTS_PER_REQUEST - 1)])]);
@@ -446,7 +488,9 @@ export class ApplePickupClient {
         for (const item of contents.flat()) {
           // 只收监控目标；哨兵是额外塞进去做健康检查的。
           if (!targetParts.has(item.partNumber)) continue;
-          stores.set(item.partNumber, new Set(storesOf(item)));
+          // 城市级通道的范围过滤：本通道确认不了的门店不能被记成「无货」，
+          // 否则合并展示时会用局部结果盖掉完整轮次里其他城市的有货结论。
+          stores.set(item.partNumber, new Set(storesOf(item).filter((id) => watchedSet.has(id))));
           const d = item.deliveryMessage?.deliveryOptions?.[0]?.date;
           if (d) delivery[item.partNumber] = d;
         }
@@ -482,10 +526,9 @@ export class ApplePickupClient {
     }
     if (perCity.some((c) => !c)) throw lastError || new Error(`${R.label}：多次重试后仍未取得可信库存数据`);
 
-    // 汇总：每个目标在这几个城市的并集，只保留用户选中的门店
+    // 汇总：每个目标在这几个城市的并集，只保留用户选中（且在本通道范围内）的门店
     // （Apple 会连带返回定位点附近的其他门店，例如定位上海会带出苏州 / 杭州，一律丢弃）；
     // 送达日期按城市顺序取第一个
-    const watchedSet = new Set(watched);
     const out = {};
     for (const p of wanted) {
       const pn = p.parts[regionId];
@@ -503,10 +546,31 @@ export class ApplePickupClient {
   }
 
   /**
-   * 优先通道的查询范围：优先门店所在地区 / 城市 + 优先机型。
-   * @param priorityKeys 标了「优先」的机型 key；为空时视为全部机型
-   * @returns {{ region, city, stores, keys, coversRegion } | null}
+   * 一个城市内被监控的门店（城市级快车道 / 优先通道的确认范围）。
+   * 香港不需要定位、一次请求就覆盖全港，所以范围是整个地区。
+   * @returns {{ region, city, stores, coversRegion } | null}
    */
+  cityScope(regionId, cityKey = null) {
+    const R = REGIONS[regionId];
+    if (!R?.onlineStore) return null;
+    const watched = this.watchedStoresIn(regionId);
+    const stores = cityKey
+      ? watched.filter((id) => CITY_KEY(regionId, STORE_BY_ID[id].city) === cityKey)
+      : watched;
+    if (!stores.length) return null;
+    return { region: regionId, city: cityKey, stores, coversRegion: stores.length === watched.length };
+  }
+
+  /** 深圳通道的查询范围：优先门店所在城市（不在深圳时取第一个深圳门店） */
+  szScope() {
+    const szStores = (this.cfg.watchStores || []).filter((id) => STORE_BY_ID[id]?.city === SZ_CITY);
+    if (!szStores.length) return null;
+    const priorityStore = STORE_BY_ID[this.cfg.priorityStore];
+    const city = priorityStore?.city === SZ_CITY ? priorityStore.city : SZ_CITY;
+    return this.cityScope('CN', CITY_KEY('CN', city));
+  }
+
+  /** 优先通道的查询范围：优先门店所在地区 / 城市 + 优先机型 */
   priorityScope(priorityKeys = []) {
     const store = STORE_BY_ID[this.cfg.priorityStore];
     const R = store && REGIONS[store.region];
@@ -516,29 +580,54 @@ export class ApplePickupClient {
     const starred = inRegion.filter((p) => priorityKeys.includes(p.key));
     const keys = (starred.length ? starred : inRegion).map((p) => p.key);
     if (!keys.length) return null;
-    const cityKey = R.needsLocation ? CITY_KEY(region, store.city) : null;
-    const watched = this.watchedStoresIn(region);
     // 本通道能确认的门店：香港一次请求覆盖全港；大陆只算优先门店所在城市
-    const stores = cityKey ? watched.filter((id) => CITY_KEY(region, STORE_BY_ID[id].city) === cityKey) : watched;
-    return { region, city: cityKey, stores, keys, coversRegion: stores.length === watched.length };
+    const scope = this.cityScope(region, R.needsLocation ? CITY_KEY(region, store.city) : null);
+    if (!scope) return null;
+    return { ...scope, keys };
   }
 
-  /**
-   * 优先通道：只查优先门店所在城市的优先机型。
-   * 返回的行只包含这些机型；没覆盖到的门店不下「无货」结论（complete=false）。
-   */
+  priorityEligible() {
+    const primary = STORE_BY_ID[this.cfg.priorityStore];
+    if (!primary) return false;
+    return (this.cfg.watchStores || []).every((id) => {
+      const store = STORE_BY_ID[id];
+      return store && store.region === primary.region && store.city === primary.city;
+    });
+  }
+
+  /** 优先通道：只查优先门店所在城市的优先机型 */
   async checkPriority(priorityKeys = []) {
     const scope = this.priorityScope(priorityKeys);
     if (!scope) throw new Error('没有可用的优先通道（优先门店所在地区没有监控机型）');
+    return this.runCityLane('优先通道', scope, scope.keys, 'PRI');
+  }
+
+  /**
+   * 深圳通道：只查深圳这一个城市的门店（大陆城市必须提交定位，所以不是「香港那样一次请求」，
+   * 但请求量只有深圳 3 家门店，可以查得和大区间隔无关地更勤）。
+   */
+  async checkCityLane() {
+    const scope = this.szScope();
+    if (!scope) throw new Error('没有可用的深圳通道（监控门店里没有深圳门店）');
+    const keys = this.cfg.products.filter((p) => p.parts?.[scope.region]).map((p) => p.key);
+    if (!keys.length) throw new Error('没有可用的深圳通道（没有大陆版料号的监控机型）');
+    return this.runCityLane('深圳通道', scope, keys, 'SZ');
+  }
+
+  /**
+   * 城市级快车道的公共实现：只查范围内的城市，未覆盖到的门店不下「无货」结论。
+   * 返回的行只包含这些机型（与完整轮次合并由 index.js 用 mergeLaneRow 完成）。
+   */
+  async runCityLane(label, scope, keys, laneTag) {
     const { region } = scope;
-    const products = this.cfg.products.filter((p) => scope.keys.includes(p.key));
+    const products = this.cfg.products.filter((p) => keys.includes(p.key));
     const inScope = new Set(scope.stores);
     let regionData;
     try {
       regionData = await this.runRegion(region, () =>
-        this.checkRegion(region, products, scope.city ? { cities: [scope.city] } : {}));
+        this.checkRegion(region, products, scope.city ? { cities: [scope.city], stores: scope.stores } : { stores: scope.stores }));
     } catch (e) {
-      this.log('[优先通道:' + region + '] 查询失败: ' + e.message);
+      this.log(`[${label}:${region}] 查询失败: ` + e.message);
       regionData = Object.fromEntries(products.map((p) =>
         [p.key, { partNumber: p.parts[region], stores: [], ok: false, error: e.message }]));
     }
@@ -560,7 +649,7 @@ export class ApplePickupClient {
         row.complete = false;
         if (!row.stores.length) row.availability = 'unknown';
       }
-      row.lane = 'priority';
+      row.lane = laneTag;
       row.scopeStores = scope.stores;
       row.scopeRegion = region;
       return row;

@@ -73,21 +73,36 @@ console.log('=== 1. 告警状态机（优先门店 = ' + cfg.priorityStore + '�
 
 console.log('\n=== 2. 邮件渲染 ===');
 {
-  const items = [mk('iPhone 18 Pro Max|512GB|Silver', [cfg.priorityStore, 'R610'], { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' })];
+  // 优先门店在哪个地区，邮件里就只出现那个地区的料号（默认 = 深圳 → 大陆 CH/A）
+  const priRegion = cfg.priorityStoreRegion;
+  const otherRegion = priRegion === 'CN' ? 'HK' : 'CN';
+  const items = [mk('iPhone 18 Pro Max|512GB|Silver', [cfg.priorityStore, 'R610'],
+    { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' })];
   items[0].product = {
     key: items[0].key,
     name: 'iPhone 18 Pro Max 512GB 银色',
     parts: { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' },
-    buyUrls: { CN: 'https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyc4ch/a' },
+    buyUrls: {
+      CN: 'https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyc4ch/a',
+      HK: 'https://www.apple.com/shop/buy-iphone/iphone-18-pro/512gb-silver',
+    },
   };
 
   const p = buildPriorityMail(items, cfg);
   assert.ok(p.subject.includes('有货'), '优先邮件标题应说明有货');
+  assert.ok(p.subject.includes(cfg.priorityStoreInfo.city), '标题应写明城市（默认深圳）');
   assert.ok(p.html.includes(storeLabel(cfg.priorityStore)), '邮件正文应列出优先门店');
-  assert.ok(!p.html.includes('MJYC4CH/A'), '香港门店邮件不应混入大陆料号');
-  assert.ok(p.html.includes('MJXU4ZA/A'), '邮件正文应列出香港料号');
+  // 两地门店都有货时，每行只出现当地料号
+  assert.ok(p.html.includes(items[0].parts.CN) && p.html.includes(items[0].parts.HK), '两地有货时两行料号各归各位');
   console.log(`  ✓ 优先邮件: ${p.subject}`);
   console.log(`     ${p.text.split('\n')[1]}`);
+
+  // 只有优先门店（默认深圳 → 大陆）有货时，邮件里不能混入另一地区的料号
+  const onlyPri = [{ ...items[0], stores: [cfg.priorityStore] }];
+  const pri = buildPriorityMail(onlyPri, cfg);
+  assert.ok(pri.html.includes(items[0].parts[priRegion]), `邮件正文应列出${priRegion}料号`);
+  assert.ok(!pri.html.includes(items[0].parts[otherRegion]), `邮件里不应混入${otherRegion}料号（优先门店不在那个地区）`);
+  console.log(`  ✓ 只列当地料号（${priRegion}）: ${pri.text.split('\n')[1]}`);
 
   const r = buildReferenceMail(items, cfg);
   assert.ok(r.subject.includes('其他门店有货'));

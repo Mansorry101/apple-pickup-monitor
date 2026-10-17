@@ -9,7 +9,7 @@ import { deliverAlerts } from './notifications.js';
 import { runSetup } from './setup.js';
 import { startWebUi } from './webui.js';
 import { settingsMtime } from './settings.js';
-import { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs, pollPlan, parseHHMM, msUntilWindowEdge } from './scheduler.js';
+import { dueRegions, msUntilNextDue, nextDueAt, pollJitterMs, pollPlan, parseHHMM, msUntilWindowEdge, selectLanes } from './scheduler.js';
 import { VERSION } from './constants.js';
 
 const argv = process.argv.slice(2);
@@ -53,11 +53,12 @@ function banner(extra = '') {
   const intervalText = cfg.watchRegions.length
     ? cfg.watchRegions
         .map((r) => (r === 'HK' ? `香港 ${cfg.hkIntervalSeconds} 秒` : `${rshort(r)} ${cfg.intervalSeconds} 秒`))
+        .concat(cfg.szIntervalSeconds < cfg.intervalSeconds ? [`深圳通道 ${cfg.szIntervalSeconds} 秒`] : [])
         .join('，')
     : '—';
   console.log(` 轮询间隔 : ${intervalText}`);
   if (cfg.rushEnabled) {
-    console.log(` 放货时段 : 北京时间 ${cfg.rushStart}–${cfg.rushEnd}（大陆 ${cfg.rushPollIntervalSeconds} 秒 / 香港 ${cfg.rushHkIntervalSeconds} 秒 / 优先 ${cfg.rushPriorityIntervalSeconds} 秒）`);
+    console.log(` 放货时段 : 北京时间 ${cfg.rushStart}–${cfg.rushEnd}（大陆 ${cfg.rushPollIntervalSeconds} 秒 / 香港 ${cfg.rushHkIntervalSeconds} 秒 / 深圳 ${cfg.rushSzIntervalSeconds} 秒 / 优先 ${cfg.rushPriorityIntervalSeconds} 秒）`);
   }
   if (cfg.priorityBoost) console.log(` 优先通道 : 常规 ${cfg.priorityIntervalSeconds} 秒，只查优先门店所在城市的优先机型`);
   console.log(` 通知邮箱 : ${cfg.mail.to.join(', ') || '(未配置)'}`);
@@ -295,22 +296,25 @@ async function run() {
   let lastSettingsMtime = settingsMtime();
   const regionPrint = {};
   let lastFingerprint = null;
-  const inFlight = new Map(); // 通道（CN / HK / PRI）→ 正在进行的轮次
+  const inFlight = new Map(); // 通道（CN / HK / SZ / PRI）→ 正在进行的轮次
   let updateChain = Promise.resolve();
   let lastRush = null;
-  const LANE_LABEL = { CN: '大陆', HK: '香港', PRI: '优先' };
+  const LANE_LABEL = { CN: '大陆', HK: '香港', SZ: '深圳', PRI: '优先' };
   const priorityKeys = () => cfg.products.filter((p) => p.priority).map((p) => p.key);
 
-  /** 当前要跑的通道：各监控地区 + （需要时）优先通道 */
+  /**
+   * 当前要跑的通道：各监控地区 + 深圳快车道 + （需要时）优先通道。
+   * 深圳通道照搬香港「单独一条快车道」的思路：它只查深圳这一个城市，
+   * 和大陆整轮各自的间隔互不影响。规则本身在 scheduler.selectLanes（可离线测试）。
+   */
   function lanesNow(plan) {
-    const active = client.activeRegions();
-    const lanes = active.map((r) => ({ id: r, region: r, interval: plan.intervals[r] ?? plan.intervals.CN }));
-    const scope = cfg.priorityBoost ? client.priorityScope(priorityKeys()) : null;
-    // 只有比所在地区整轮更勤时才开优先通道，否则它只是重复请求
-    if (scope && active.includes(scope.region) && plan.intervals.PRI < (plan.intervals[scope.region] ?? Infinity)) {
-      lanes.push({ id: 'PRI', region: scope.region, interval: plan.intervals.PRI });
-    }
-    return lanes;
+    const priorityScope = cfg.priorityBoost && client.priorityEligible() ? client.priorityScope(priorityKeys()) : null;
+    return selectLanes({
+      active: client.activeRegions(),
+      intervals: plan.intervals,
+      szScope: client.szScope(),
+      priorityScope,
+    });
   }
 
   while (!stopping) {
@@ -328,7 +332,11 @@ async function run() {
     }
     lastRush = plan.rush;
 
-    const lanes = lanesNow(plan);
+    const { lanes, coveredBySz, priorityScope } = lanesNow(plan);
+    // 优先通道被深圳快车道顶掉时，界面上也要说明原因，否则「优先通道消失了」看起来像 bug
+    if (coveredBySz && priorityScope?.region) {
+      lanes.push({ id: 'PRI', region: priorityScope.region, interval: plan.intervals.PRI, skipped: '已被深圳通道覆盖' });
+    }
     if (!lanes.length) {
       cycle++;
       const started = Date.now();
@@ -357,25 +365,32 @@ async function run() {
         running: inFlight.has(l.id),
         nextAt: dueAt[l.id] || null,
         cooldownUntil: client.cooldownUntil(l.region) || null,
+        skipped: l.skipped || null,
       })),
     };
 
-    // 正在查询中的通道不重复派发；各通道独立并发，大陆的慢查询 / 重试不会拖住香港。
-    const idle = lanes.filter((l) => !inFlight.has(l.id));
+    // 正在查询中的通道不重复派发；各通道独立并发，大陆的慢查询 / 重试不会拖住香港 / 深圳。
+    const idle = lanes.filter((l) => !inFlight.has(l.id) && !l.skipped);
     const due = dueRegions(dueAt, idle.map((l) => l.id), Date.now());
     if (due.length) {
       cycle++;
       const started = Date.now();
-      for (const lane of idle.filter((l) => due.includes(l.id))) {
+      const dueLanes = idle.filter((l) => due.includes(l.id));
+      for (const lane of dueLanes) {
         dueAt[lane.id] = nextDueAt(started, lane.interval, pollJitterMs(lane.interval));
       }
-      const regionsDue = due.filter((id) => id !== 'PRI');
+      // 地区整轮（大陆 / 香港）只在本地区到期时跑；深圳 / 优先是城市级通道，各自单独跑。
+      // 注意这里必须按「本轮到期」过滤 —— 否则每次深圳快车道都会顺带跑一遍完整大陆轮询。
+      const regionDue = dueLanes.filter((l) => !l.cities);
+      const cityDue = dueLanes.filter((l) => l.cities);
+      const coversAll = regionDue.every((l) => l.covers !== false);
       const tasks = [];
-      if (regionsDue.length) {
-        const reuseMaxAgeMs = Math.min(...lanes.filter((l) => l.id !== 'PRI').map((l) => l.interval));
-        tasks.push([regionsDue, runRound(cycle, regionsDue, started, reuseMaxAgeMs)]);
+      if (regionDue.length) {
+        // 覆盖全部监控门店的本轮结果才可以被其他通道复用
+        const reuseMaxAgeMs = coversAll ? Math.min(...regionDue.map((l) => l.interval)) : 0;
+        tasks.push([regionDue.map((l) => l.id), runRound(cycle, regionDue.map((l) => l.id), started, reuseMaxAgeMs)]);
       }
-      if (due.includes('PRI')) tasks.push([['PRI'], runPriorityRound(cycle, started)]);
+      for (const lane of cityDue) tasks.push([[lane.id], runCityRound(cycle, lane.id, started)]);
       for (const [ids, task] of tasks) {
         for (const id of ids) inFlight.set(id, task);
         task.finally(() => {
@@ -411,7 +426,7 @@ async function run() {
 
   /**
    * 仅用于界面展示：本轮没查的地区（pending）沿用上一次的已知结果，
-   * 避免香港 3 秒一轮时大陆在「无货」和「等待下一轮」之间来回跳。告警不走这里。
+   * 避免香港 / 深圳 3 秒一轮时大陆整轮在「无货」和「等待下一轮」之间来回跳。告警不走这里。
    */
   function keepKnownRegions(prev, next) {
     if (!prev) return next;
@@ -451,18 +466,30 @@ async function run() {
     return changed;
   }
 
-  async function runPriorityRound(round, started) {
+  /**
+   * 城市级快车道的一轮（深圳 / 优先通道）：只查自己覆盖的城市。
+   * 展示时把局部结果并入最近一次完整结果；告警只用本通道确认过的数据
+   *（没覆盖到的门店不会因此被判「售罄」）。
+   */
+  async function runCityRound(round, laneId, started) {
+    const label = LANE_LABEL[laneId] || laneId;
     try {
       const checkClient = client;
       const checkCfg = cfg;
-      const rows = await checkClient.checkPriority(priorityKeys());
+      const rows = laneId === 'PRI'
+        ? await checkClient.checkPriority(priorityKeys())
+        : await checkClient.checkCityLane();
       const job = updateChain.then(async () => {
         if (checkCfg !== cfg || checkClient !== client) return;
-        // 展示：并入最近一次完整结果；告警：只用本通道确认过的数据（不完整时不会下「售罄」结论）
-        const display = rows.map((r) => checkClient.mergeLaneRow(latestRows.get(r.key), r));
-        const changed = publish(display, rows, 'PRI|');
-        const tag = '#' + round + ' [优先] (' + (Date.now() - started) + 'ms)';
-        log(changed ? tag + ' 优先门店结果更新\n' + render(display) : tag + ' 无变化');
+        const display = rows.map((r) => {
+          const merged = checkClient.mergeLaneRow(latestRows.get(r.key), r);
+          merged.lane = laneId;
+          return merged;
+        });
+        for (const r of rows) r.lane = laneId;
+        const changed = publish(display, rows, laneId + '|');
+        const tag = '#' + round + ' [' + label + '] (' + (Date.now() - started) + 'ms)';
+        log(changed ? tag + ' 结果更新\n' + render(display) : tag + ' 无变化');
         const errors = await deliverAlerts(rows, state, checkCfg, { persist, dryRun, log, send: makeSender(checkCfg) });
         const all = cfg.products.map((p) => latestRows.get(p.key)).filter(Boolean);
         status.lastError = [queryErrors(all), ...errors].filter(Boolean).join('；') || null;
@@ -470,7 +497,7 @@ async function run() {
       updateChain = job.catch(() => {});
       await job;
     } catch (e) {
-      log(`#${round} ❌ 优先通道检查失败: ${e.message}`);
+      log(`#${round} ❌ ${label}通道检查失败: ${e.message}`);
       status.lastError = e.message;
     }
   }

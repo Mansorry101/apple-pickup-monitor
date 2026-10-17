@@ -1,9 +1,9 @@
 {
   "name": "apple-pickup-monitor",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
-  "description": "监控中国大陆 / 香港 Apple Store 门市取货库存（任意机型 / 容量 / 颜色 / 门店），有货时邮件通知",
+  "description": "监控中国大陆 / 香港 Apple Store 门市取货库存（任意机型 / 容量 / 颜色 / 门店），有货时邮件通知；深圳可单独走高频快车道",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

@@ -490,10 +490,11 @@ test('放货时段按北京时间判断，06:00 进入、09:00 退出，与机�
 });
 
 test('轮询计划：放货时段用高速间隔，关闭后始终常规',()=>{
-  const c={rushEnabled:true,rushStart:'06:00',rushEnd:'09:00',intervalSeconds:60,hkIntervalSeconds:5,priorityIntervalSeconds:20,
-    rushPollIntervalSeconds:15,rushHkIntervalSeconds:3,rushPriorityIntervalSeconds:8};
-  assert.deepEqual(sched.pollPlan(c,bj(7)),{rush:true,intervals:{CN:15000,HK:3000,PRI:8000}});
-  assert.deepEqual(sched.pollPlan(c,bj(10)),{rush:false,intervals:{CN:60000,HK:5000,PRI:20000}});
+  const c={rushEnabled:true,rushStart:'06:00',rushEnd:'09:00',intervalSeconds:60,hkIntervalSeconds:5,szIntervalSeconds:5,
+    priorityIntervalSeconds:20,rushPollIntervalSeconds:15,rushHkIntervalSeconds:3,rushSzIntervalSeconds:3,
+    rushPriorityIntervalSeconds:8};
+  assert.deepEqual(sched.pollPlan(c,bj(7)),{rush:true,intervals:{CN:15000,HK:3000,SZ:3000,PRI:8000}});
+  assert.deepEqual(sched.pollPlan(c,bj(10)),{rush:false,intervals:{CN:60000,HK:5000,SZ:5000,PRI:20000}});
   assert.equal(sched.pollPlan({...c,rushEnabled:false},bj(7)).rush,false);
   assert.equal(sched.throttleBackoffMs(1),60_000);assert.equal(sched.throttleBackoffMs(2),120_000);
   assert.equal(sched.throttleBackoffMs(9),300_000,'最长 5 分钟');
@@ -563,4 +564,178 @@ test('Apple 限流（429）：本轮不重试，地区进入冷却，成功后�
   s.queryParts=async(parts)=>parts.map(p=>item(p,1));
   await client.checkAvailability();
   assert.equal(client.cooldownUntil('HK'),0,'成功一次即解除冷却');
+});
+
+// ---------- 通道选择（深圳快车道 / 优先通道去重） ----------
+const SZ_STORES=['R484','R761','R793'];
+const szScope = { region: 'CN', city: 'CN:深圳', stores: [...SZ_STORES], coversRegion: true };
+const bjScope = { region: 'CN', city: 'CN:北京', stores: ['R320'], coversRegion: false };
+const szPriScope = { ...szScope, keys: ['A'] };
+const normalInts = { CN: 60_000, HK: 5_000, SZ: 5_000, PRI: 20_000 };
+
+test('通道选择：深圳通道比大陆整轮更勤时才开，否则不重复请求',()=>{
+  const on=sched.selectLanes({ active:['CN'], intervals:normalInts, szScope });
+  assert.deepEqual(on.lanes.map((l) => l.id),['CN','SZ']);
+  const sz=on.lanes.find((l) => l.id==='SZ');
+  assert.deepEqual(sz.cities,{CN:['CN:深圳']});
+  assert.equal(sz.interval,5_000);assert.equal(sz.covers,true);
+
+  // 深圳间隔不比大陆整轮短 → 不开（否则只是重复请求同一批门店）
+  const off=sched.selectLanes({ active:['CN'], intervals:{...normalInts,SZ:90_000}, szScope });
+  assert.deepEqual(off.lanes.map((l) => l.id),['CN']);
+  // 没有深圳门店 / 深圳不在本轮地区里 → 也不开
+  assert.deepEqual(sched.selectLanes({ active:['CN'], intervals:normalInts, szScope:null }).lanes.map((l) => l.id),['CN']);
+  assert.deepEqual(sched.selectLanes({ active:['HK'], intervals:normalInts, szScope }).lanes.map((l) => l.id),['HK']);
+});
+
+test('通道选择：优先通道和深圳通道查同一城市时自动去重，界面能看到原因',()=>{
+  const r=sched.selectLanes({ active:['CN'], intervals:normalInts, szScope, priorityScope:szPriScope });
+  assert.deepEqual(r.lanes.map((l) => l.id),['CN','SZ'],'优先通道不重复查深圳');
+  assert.equal(r.coveredBySz,true);
+  assert.equal(r.priorityScope.city,'CN:深圳','返回范围供界面说明「已被深圳通道覆盖」');
+
+  // 优先门店不在深圳（例如北京）：两条通道各查各的城市，都要跑
+  const both=sched.selectLanes({ active:['CN'], intervals:normalInts, szScope, priorityScope:bjScope });
+  assert.deepEqual(both.lanes.map((l) => l.id),['CN','SZ','PRI']);
+  assert.equal(both.coveredBySz,false);
+
+  // 优先通道比深圳通道更勤：保留优先通道（它确实更勤，不是重复）
+  const faster=sched.selectLanes({ active:['CN'], intervals:{...normalInts,PRI:3_000}, szScope, priorityScope:szPriScope });
+  assert.deepEqual(faster.lanes.map((l) => l.id),['CN','SZ','PRI']);
+  assert.equal(faster.coveredBySz,false);
+});
+
+test('通道选择：只有到期的通道会被派发（深圳每一轮不该顺带跑一遍大陆整轮）',()=>{
+  const { lanes } = sched.selectLanes({ active:['CN'], intervals:normalInts, szScope });
+  assert.deepEqual(lanes.map((l) => [l.id, l.interval]),[['CN',60_000],['SZ',5_000]]);
+  const t0=1_000_000,regions=['CN','SZ'];
+  const dueAt={};
+  const dispatch = (at) => {
+    const due=sched.dueRegions(dueAt,regions,at);
+    for (const l of lanes.filter((x) => due.includes(x.id))) dueAt[l.id]=sched.nextDueAt(at,l.interval,0);
+    return due;
+  };
+  // 第一轮：两条通道都没查过 → 都到期
+  assert.deepEqual(dispatch(t0),['CN','SZ']);
+  // 之后每 5 秒只有深圳到点，大陆整轮在 60 秒内都不该被派发
+  for (const at of [t0+5_000,t0+10_000,t0+30_000,t0+59_000]) {
+    assert.deepEqual(dispatch(at),['SZ'],`t+${(at-t0)/1000}s 只该跑深圳通道`);
+  }
+  // 深圳上一轮是 t+59，下一轮到 t+64；大陆整轮刚在 t+60 跑过，之后一直不该再被派发
+  assert.deepEqual(dispatch(t0+60_000),['CN'],'60 秒整只有大陆整轮到期');
+  assert.deepEqual(dispatch(t0+64_000),['SZ'],'深圳按自己的 5 秒间隔到点');
+  for (const at of [t0+69_000,t0+90_000,t0+119_000]) {
+    assert.deepEqual(dispatch(at),['SZ'],'5 秒级通道继续到点，大陆整轮不参与');
+  }
+});
+
+// ---------- 深圳快车道：真实查询行为 ----------
+const szCfg={...cfg,watchStores:SZ_STORES,priorityStore:'R484',priorityStoreFor:{CN:'R484'},szIntervalSeconds:5};
+function szClient(extra={}) {
+  const client=new ApplePickupClient({...szCfg,...extra},()=>{});
+  // 深圳 3 家门店都算「深圳门店」，所以共用一个城市会话（大陆城市必须先提交定位）
+  const s=client.session('CN','CN:深圳');
+  s.ready=true;s.createdAt=Date.now();s.locationKey='CN:深圳';s.warmedKey='CN:深圳';
+  s.ensureSession=async()=>{s.ready=true;s.createdAt=Date.now();};
+  return {client,s};
+}
+
+test('深圳通道的范围只含深圳门店，且能确认全部监控门店时结果才算完整',()=>{
+  const {client}=szClient();
+  const scope=client.szScope();
+  assert.equal(scope.region,'CN');assert.equal(scope.city,'CN:深圳');
+  assert.deepEqual([...scope.stores].sort(),[...SZ_STORES].sort(),'范围内应只有深圳 3 家门店');
+  assert.equal(scope.coversRegion,true,'只有深圳门店在监控列表里 → 该通道覆盖全部范围');
+
+  // 同时监控深圳 + 北京：深圳通道只覆盖深圳，北京交给大陆整轮
+  const mixed=new ApplePickupClient({...szCfg,watchStores:[...SZ_STORES,'R320']},()=>{});
+  const mixedScope=mixed.szScope();
+  assert.deepEqual([...mixedScope.stores].sort(),[...SZ_STORES].sort());
+  assert.equal(mixedScope.coversRegion,false,'北京不在深圳通道范围内');
+
+  // 没有深圳门店 → 不开这条通道
+  assert.equal(new ApplePickupClient({...szCfg,watchStores:['R320']},()=>{}).szScope(),null);
+});
+
+test('深圳通道只提交深圳一处定位、只请求深圳门店，别的城市门店被丢弃',async()=>{
+  const {client,s}=szClient();
+  const located=[];let allowedStore='';
+  s.setLocation=async(city)=>{located.push(city.key);s.locationKey=city.key;};
+  s.warmUp=async()=>true;
+  s.queryParts=async(parts,store)=>{allowedStore=store;assert.ok(parts.includes(REGIONS.CN.canaryPart),'每批都带大陆哨兵');
+    // 接口会连带返回定位点附近的其他门店（东莞 / 广州…），本通道必须丢掉
+    return parts.map(p=>p===REGIONS.CN.canaryPart
+      ? {...item(p,1),eligibleStores:'R793',storeId:'R793'}
+      : {...item(p,3),eligibleStores:'R484,R761,R888'});};
+  const rows=await client.checkCityLane();
+  assert.deepEqual(located,['CN:深圳'],'只提交深圳的定位（state/city/district）');
+  assert.equal(allowedStore,'R484','触发器门店应当是本轮范围内的优先门店（R484）');
+  assert.deepEqual([...rows[0].stores].sort(),['R484','R761'],'R888 不在监控列表里 → 丢弃');
+  assert.equal(rows[0].lane,'SZ');assert.equal(rows[0].ok,true);
+  assert.deepEqual(rows[0].scopeStores,[...SZ_STORES]);
+});
+
+test('深圳通道不覆盖的门店不会被下「无货」结论：完整轮次的结果不被局部结果覆盖',async()=>{
+  const {client,s}=szClient();
+  s.setLocation=async()=>{};s.warmUp=async()=>true;
+  // 同时监控深圳 + 北京，深圳通道只覆盖深圳
+  const mixed=new ApplePickupClient({...szCfg,watchStores:[...SZ_STORES,'R320'],priorityStoreFor:{CN:'R484'}},()=>{});
+  const ms=mixed.session('CN','CN:深圳'),bs=mixed.session('CN','CN:北京');
+  for(const [sess,store] of [[ms,'R484'],[bs,'R320']]) {
+    sess.ready=true;sess.createdAt=Date.now();sess.warmedKey=sess.locationKey=null;
+    sess.setLocation=async(city)=>{sess.locationKey=city.key;};sess.warmUp=async()=>true;
+  }
+  // 完整轮次：深圳没货、北京有货
+  ms.queryParts=async(parts)=>parts.map(p=>p===REGIONS.CN.canaryPart?{...item(p,1),eligibleStores:'R484',storeId:'R484'}:item(p,0));
+  bs.queryParts=async(parts)=>parts.map(p=>p===REGIONS.CN.canaryPart?{...item(p,1),eligibleStores:'R320',storeId:'R320'}
+    :{...item(p,1),eligibleStores:'R320'});
+  const [full]=await mixed.checkAvailability();
+  assert.deepEqual(full.stores,['R320'],'完整轮次里北京有货');
+
+  // 深圳通道随后只查深圳（深圳仍然没货）：只剩北京这一家门店没被本通道确认
+  const [lane]=await mixed.checkCityLane();
+  assert.deepEqual(lane.stores,[],'深圳通道只确认深圳');
+  assert.equal(lane.complete,false,'北京不在通道范围内 → 不能算完整结论');
+  assert.equal(lane.availability,'unknown','不完整时不能宣称无货');
+
+  const merged=mixed.mergeLaneRow(full,lane);
+  assert.deepEqual(merged.stores,['R320'],'北京的有货结论必须沿用完整轮次的数据');
+  assert.equal(merged.complete,true);assert.equal(merged.perRegion.CN.ok,true);
+});
+
+test('深圳通道没覆盖全部门店时，本地缓存不能被当作「该地区最新且完整」复用',async()=>{
+  const mixedCfg={...szCfg,watchStores:[...SZ_STORES,'R499','R320'],priorityStoreFor:{CN:'R484',HK:'R499'}};
+  const mixed=new ApplePickupClient(mixedCfg,()=>{});
+  const setups=[];
+  // HK 只监控一家门店，一次请求就覆盖全地区；大陆同时有深圳和北京
+  const hk=mixed.session('HK');hk.ready=true;hk.createdAt=Date.now();hk.warmedKey='';
+  hk.queryParts=async(parts)=>parts.map(p=>({...item(p,1),eligibleStores:'R499',storeId:'R499'}));
+  for(const [city,store] of [['CN:深圳','R484'],['CN:北京','R320']]) {
+    const s=mixed.session('CN',city);
+    s.ready=true;s.createdAt=Date.now();s.warmedKey=city;s.setLocation=async()=>{};s.warmUp=async()=>true;
+    setups.push(s);
+    s.queryParts=async(parts)=>parts.map(p=>p===REGIONS.CN.canaryPart?{...item(p,1),eligibleStores:store,storeId:store}
+      :store==='R320'?{...item(p,1),eligibleStores:'R320'}:item(p,0));
+  }
+  // 完整轮次：深圳没货、北京与香港有货
+  const [full]=await mixed.checkAvailability();
+  assert.deepEqual([...full.stores].sort(),['R320','R499'].sort());
+  assert.equal(full.complete,true);
+  // 只查深圳这一个城市（等价于深圳通道刚跑完）：本地缓存的范围随即缩到深圳
+  const [szOnly]=await mixed.checkAvailability({only:['CN'],cities:{CN:['CN:深圳']}});
+  assert.deepEqual(szOnly.stores,[],'深圳没货');
+  assert.equal(szOnly.perRegion.CN.ok,true);
+  // 香港这一轮不要重复请求大陆，改用近期结果：缓存只覆盖深圳，不能替北京下结论
+  const [reused]=await mixed.checkAvailability({only:['HK'],reuseMaxAgeMs:60_000});
+  assert.equal(reused.perRegion.CN.pending,true,'缓存没覆盖北京 → 只能标成「本轮未查询」');
+  assert.equal(reused.perRegion.CN.ok,false);
+  assert.equal(reused.complete,false);
+  assert.deepEqual([...reused.stores],['R499'],'香港这轮有货的结果照常保留');
+  // 覆盖全部监控门店的完整轮次结果才可以被复用
+  await mixed.checkAvailability();
+  const [ok]=await mixed.checkAvailability({only:['HK'],reuseMaxAgeMs:60_000});
+  assert.notEqual(ok.perRegion.CN.pending,true,'完整轮次的结果可以被复用');
+  assert.deepEqual([...ok.stores].sort(),['R320','R499'].sort());
+  assert.equal(ok.complete,true);
+  assert.equal(setups.length,2);
 });

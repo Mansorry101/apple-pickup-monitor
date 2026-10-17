@@ -20,13 +20,18 @@ export const PART_RE = /^[A-Z0-9]{4,12}\/[A-Z]{1,2}$/;
 
 export const DEFAULT_SETTINGS = {
   version: 2,
-  priorityStore: 'R499',
-  watchStores: ['R499'],
+  // 默认盯深圳：优先门店 = 深圳益田假日广场（R484）
+  // 其他深圳门店（R761 万象城 / R793 前海壹方城）在界面里点「添加门店」即可一起监控。
+  priorityStore: 'R484',
+  watchStores: ['R484'],
   priorityOnly: false,
   soldOutNotify: true,
   repeatAlertMinutes: 15,
   pollIntervalSeconds: 60,
   hkIntervalSeconds: 5,
+  // 深圳自己的快速通道：大陆城市必须提交定位，所以不像香港那样只发一次请求，
+  // 但只查深圳这一个城市（3 家门店）的代价很小，可以查得比大陆整轮勤得多。
+  szIntervalSeconds: 5,
   // 优先门店 + 优先机型的快速通道：只查优先门店所在城市，比整轮扫描更勤
   priorityBoost: true,
   priorityIntervalSeconds: 20,
@@ -36,11 +41,12 @@ export const DEFAULT_SETTINGS = {
   rushEnd: '09:00',
   rushPollIntervalSeconds: 15,
   rushHkIntervalSeconds: 3,
+  rushSzIntervalSeconds: 3,
   rushPriorityIntervalSeconds: 8,
   uiPort: 8787,
   targets: [
-    { key: 'iPhone 18 Pro Max|512GB|Silver', name: 'iPhone 18 Pro Max 512GB 银色', parts: { HK: 'MJXU4ZA/A' } },
-    { key: 'iPhone 18 Pro Max|512GB|Black', name: 'iPhone 18 Pro Max 512GB 黑色', parts: { HK: 'MJXT4ZA/A' } },
+    { key: 'iPhone 18 Pro Max|512GB|Silver', name: 'iPhone 18 Pro Max 512GB 银色', parts: { CN: 'MJYC4CH/A' } },
+    { key: 'iPhone 18 Pro Max|512GB|Black', name: 'iPhone 18 Pro Max 512GB 黑色', parts: { CN: 'MJXT4CH/A' } },
   ],
 };
 
@@ -68,37 +74,61 @@ function cleanStores(list, priorityStore) {
   return out.length ? out : [priorityStore || DEFAULT_SETTINGS.priorityStore];
 }
 
-export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
-  const s = { ...base, ...(input || {}) };
+function sameCityStores(storeIds, priorityStore) {
+  const primary = STORE_BY_ID[priorityStore];
+  if (!primary) return false;
+  return storeIds.every((id) => {
+    const store = STORE_BY_ID[id];
+    return store && store.region === primary.region && store.city === primary.city;
+  });
+}
+
+export function normalizeSettings(input, base) {
+  // 不传 base 表示「只有这一份配置」：缺字段就用默认值。
+  // 传了 base（loadSettings 的上一份配置 / saveSettings 的默认值）时，
+  // 缺字段才从 base 继承 —— 见下面 watchStores 的处理。
+  const hasBase = base !== undefined;
+  const resolvedBase = hasBase ? base : DEFAULT_SETTINGS;
+  const s = { ...resolvedBase, ...(input || {}) };
   const inp = input || {};
 
   const priorityStore =
     STORE_BY_ID[s.priorityStore] && REGIONS[STORE_BY_ID[s.priorityStore].region].onlineStore
       ? s.priorityStore
-      : base.priorityStore || DEFAULT_SETTINGS.priorityStore;
+      : resolvedBase.priorityStore || DEFAULT_SETTINGS.priorityStore;
 
   const priorityOnly = inp.priorityOnly !== undefined
     ? Boolean(inp.priorityOnly)
     : inp.cantonOnly !== undefined
       ? Boolean(inp.cantonOnly)
-      : Boolean(base.priorityOnly);
+      : Boolean(resolvedBase.priorityOnly);
 
+  // 监控门店列表：只有「这一份配置自己写了 watchStores」或「继承的 base 里确实有」时才用它。
+  // 都没有（旧版配置只记了优先门店）就只回填优先门店一个 —— 不能因为
+  // 合并默认值而把默认门店悄悄加进用户的监控列表。
+  const rawWatch = Array.isArray(inp.watchStores) ? inp.watchStores
+    : hasBase && Array.isArray(resolvedBase.watchStores) ? resolvedBase.watchStores
+      : [];
   const out = {
     version: 2,
     priorityStore,
-    watchStores: cleanStores(s.watchStores, priorityStore),
+    watchStores: cleanStores(rawWatch, priorityStore),
     priorityOnly,
     soldOutNotify: s.soldOutNotify !== false,
     repeatAlertMinutes: clampInt(s.repeatAlertMinutes, 15, 0, 24 * 60),
     pollIntervalSeconds: clampInt(s.pollIntervalSeconds, 60, 15, 24 * 3600),
     hkIntervalSeconds: clampInt(s.hkIntervalSeconds, 5, 3, 24 * 3600),
-    priorityBoost: s.priorityBoost !== false,
+    // 深圳通道：和香港一样可以在 3 秒级查询（只查深圳一个城市，代价小）
+    szIntervalSeconds: clampInt(s.szIntervalSeconds, 5, 3, 24 * 3600),
+    // 优先高频通道只对同一城市的监控列表开放，跨城市时自动关闭。
+    priorityBoost: s.priorityBoost !== false && sameCityStores(cleanStores(rawWatch, priorityStore), priorityStore),
     priorityIntervalSeconds: clampInt(s.priorityIntervalSeconds, 20, 5, 24 * 3600),
     rushEnabled: s.rushEnabled !== false,
     rushStart: hhmm(s.rushStart, '06:00'),
     rushEnd: hhmm(s.rushEnd, '09:00'),
     rushPollIntervalSeconds: clampInt(s.rushPollIntervalSeconds, 15, 15, 24 * 3600),
     rushHkIntervalSeconds: clampInt(s.rushHkIntervalSeconds, 3, 3, 24 * 3600),
+    rushSzIntervalSeconds: clampInt(s.rushSzIntervalSeconds, 3, 3, 24 * 3600),
     rushPriorityIntervalSeconds: clampInt(s.rushPriorityIntervalSeconds, 8, 5, 24 * 3600),
     uiPort: clampInt(s.uiPort, 8787, 1024, 65535),
     targets: [],
@@ -112,7 +142,7 @@ export function normalizeSettings(input, base = DEFAULT_SETTINGS) {
     seen.add(rec.key);
     out.targets.push(rec);
   }
-  if (!providedTargets) out.targets = base.targets || DEFAULT_SETTINGS.targets;
+  if (!providedTargets) out.targets = resolvedBase.targets || DEFAULT_SETTINGS.targets;
 
   return out;
 }

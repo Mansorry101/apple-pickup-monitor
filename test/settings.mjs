@@ -40,8 +40,22 @@ console.log('\n=== 旧版配置自动迁移（v1 → v2）===');
   assert.equal(r.priorityOnly, true, 'cantonOnly 应迁移为 priorityOnly');
   assert.equal(r.targets.length, 2, '旧料号不应被丢弃');
   assert.deepEqual(r.targets[0].parts, { HK: 'MJXU4ZA/A' }, '旧料号应推断出香港地区');
-  assert.deepEqual(r.watchStores, ['R499'], '未提供 watchStores 时应回填优先门店');
+  assert.deepEqual(r.watchStores, ['R499'], '未提供 watchStores 时应回填优先门店，且不夹带默认门店');
   console.log('  ✓ 旧配置的 cantonOnly / partNumber 都被正确迁移');
+}
+
+console.log('\n=== 默认值：盯深圳 ===');
+{
+  assert.equal(DEFAULT_SETTINGS.priorityStore, 'R484');
+  assert.deepEqual(DEFAULT_SETTINGS.watchStores, ['R484'], '默认只监控优先门店一个，不替用户多选');
+  assert.equal(STORE_BY_ID[DEFAULT_SETTINGS.priorityStore].city, '深圳');
+  for (const t of DEFAULT_SETTINGS.targets) {
+    assert.ok(Object.values(t.parts).every((pn) => pn.endsWith('CH/A')),
+      '默认机型必须是大陆料号（深圳门店只卖 CH/A）：' + JSON.stringify(t.parts));
+  }
+  assert.equal(DEFAULT_SETTINGS.szIntervalSeconds, 5, '深圳通道默认 5 秒');
+  assert.equal(DEFAULT_SETTINGS.rushSzIntervalSeconds, 3, '放货时段深圳通道默认 3 秒');
+  console.log(`  ✓ 默认优先门店 ${DEFAULT_SETTINGS.priorityStore}（深圳），机型料号为大陆版，深圳通道 5 秒 / 放货 3 秒`);
 }
 
 console.log('\n=== 料号校验 ===');
@@ -91,12 +105,14 @@ console.log('\n=== 门店校验 ===');
 {
   assert.equal(normalizeSettings({ priorityStore: 'R428' }).priorityStore, 'R428', '香港门店可用');
   assert.equal(normalizeSettings({ priorityStore: 'R401' }).priorityStore, 'R401', '大陆门店可用');
-  assert.equal(normalizeSettings({ priorityStore: 'R999' }).priorityStore, 'R499', '非法门店应回退');
-  assert.equal(normalizeSettings({ priorityStore: 'hack' }).priorityStore, 'R499');
-  console.log('  ✓ 合法门店保留，非法门店回退');
+  assert.equal(normalizeSettings({ priorityStore: 'R484' }).priorityStore, 'R484', '深圳门店可用');
+  assert.equal(normalizeSettings({ priorityStore: 'R999' }).priorityStore, DEFAULT_SETTINGS.priorityStore, '非法门店应回退');
+  assert.equal(normalizeSettings({ priorityStore: 'hack' }).priorityStore, DEFAULT_SETTINGS.priorityStore);
+  console.log('  ✓ 合法门店保留，非法门店回退到默认优先门店');
 
   assert.equal(
-    normalizeSettings({ priorityStore: 'R697' }).priorityStore, 'R499',
+    normalizeSettings({ priorityStore: 'R697' }).priorityStore,
+    DEFAULT_SETTINGS.priorityStore,
     '澳门门店没有网上商店，不能作为优先门店',
   );
   console.log('  ✓ 澳门门店被拒绝作为优先门店（无网上商店）');
@@ -116,6 +132,11 @@ console.log('\n=== 监控门店列表清洗 ===');
   const r3 = normalizeSettings({ priorityStore: 'R401', watchStores: [] });
   assert.deepEqual(r3.watchStores, ['R401']);
   console.log('  ✓ 空列表回填优先门店');
+
+  // 回归：换优先门店时，不能把默认门店（R484）也悄悄塞进监控列表
+  const r4 = normalizeSettings({ priorityStore: 'R401' });
+  assert.deepEqual(r4.watchStores, ['R401'], '只改优先门店不应扩大监控范围');
+  console.log('  ✓ 只改优先门店不会夹带默认门店');
 }
 
 console.log('\n=== 数值范围钳制 ===');
@@ -130,11 +151,17 @@ console.log('\n=== 数值范围钳制 ===');
   assert.equal(normalizeSettings({ hkIntervalSeconds: 999999 }).hkIntervalSeconds, 86400);
   assert.equal(normalizeSettings({ hkIntervalSeconds: 'abc' }).hkIntervalSeconds, 5, '香港间隔缺省应为 5 秒');
   assert.equal(normalizeSettings({}).hkIntervalSeconds, 5, '没配置时香港间隔默认 5 秒，保证香港查得够勤');
+  // 深圳通道：和香港同级的下限（3 秒），默认 5 秒
+  assert.equal(normalizeSettings({ szIntervalSeconds: 1 }).szIntervalSeconds, 3, '深圳通道间隔过低应被抬到 3');
+  assert.equal(normalizeSettings({ szIntervalSeconds: 5 }).szIntervalSeconds, 5);
+  assert.equal(normalizeSettings({ szIntervalSeconds: 'abc' }).szIntervalSeconds, 5, '深圳通道缺省应为 5 秒');
+  assert.equal(normalizeSettings({}).szIntervalSeconds, 5, '没配置时深圳通道默认 5 秒');
+  assert.equal(normalizeSettings({ rushSzIntervalSeconds: 1 }).rushSzIntervalSeconds, 3, '放货时段深圳通道也不低于 3 秒');
   // 香港间隔独立于大陆间隔，互不影响
   const both = normalizeSettings({ pollIntervalSeconds: 120, hkIntervalSeconds: 5 });
   assert.equal(both.pollIntervalSeconds, 120);
   assert.equal(both.hkIntervalSeconds, 5);
-  console.log('  ✓ 轮询间隔 / 香港间隔 / 重复提醒 / 端口 都被正确钳制');
+  console.log('  ✓ 轮询间隔 / 香港间隔 / 深圳通道间隔 / 重复提醒 / 端口 都被正确钳制');
 
   // 放货时段与优先通道
   const d = normalizeSettings({});
@@ -203,8 +230,21 @@ console.log('\n=== 门店目录完整性 ===');
   assert.equal(REGIONS.HK.canaryPart, 'MH3A4ZP/A');
   console.log('  ✓ 澳门标记为不可查询；两地哨兵料号正确');
 
+  // 深圳门店必须带正确的定位行政区：前海壹方城在宝安、万象城在罗湖、益田假日广场在南山。
+  // 区的取值直接决定大陆定位落在哪，填错会把定位带偏、漏掉真实有货的门店。
+  const szDistrict = Object.fromEntries(
+    STORES.filter((s) => s.city === '深圳').map((s) => [s.id, `${s.name}→${s.district}`]),
+  );
+  assert.deepEqual(szDistrict, {
+    R793: '前海壹方城→宝安区',
+    R761: '深圳万象城→罗湖区',
+    R484: '深圳益田假日广场→南山区',
+  });
+  console.log('  ✓ 深圳 3 家门店的定位行政区正确（宝安 / 罗湖 / 南山）');
+
   assert.ok(STORE_BY_ID.R499 && STORE_BY_ID.R499.region === 'HK');
   assert.ok(STORE_BY_ID.R401 && STORE_BY_ID.R401.region === 'CN');
+  assert.ok(STORE_BY_ID.R484 && STORE_BY_ID.R484.region === 'CN' && STORE_BY_ID.R484.city === '深圳');
   console.log('  ✓ 门店索引可用');
 }
 

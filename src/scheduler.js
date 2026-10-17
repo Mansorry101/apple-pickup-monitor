@@ -64,14 +64,15 @@ export function msUntilWindowEdge(now, startMin, endMin) {
 
 /**
  * 当前生效的轮询计划。
- * @returns {{ rush: boolean, intervals: { CN: number, HK: number, PRI: number } }}（毫秒）
+ * @returns {{ rush: boolean, intervals: { CN: number, HK: number, SZ: number, PRI: number } }}（毫秒）
+ * SZ = 深圳通道：和香港一样单独一条快车道（大陆城市必须提交定位，但只查深圳一个城市）。
  */
 export function pollPlan(cfg, now = Date.now()) {
   const rush = Boolean(cfg.rushEnabled) && inWindow(now, parseHHMM(cfg.rushStart), parseHHMM(cfg.rushEnd));
   const s = rush
-    ? { CN: cfg.rushPollIntervalSeconds, HK: cfg.rushHkIntervalSeconds, PRI: cfg.rushPriorityIntervalSeconds }
-    : { CN: cfg.intervalSeconds, HK: cfg.hkIntervalSeconds, PRI: cfg.priorityIntervalSeconds };
-  return { rush, intervals: { CN: s.CN * 1000, HK: s.HK * 1000, PRI: s.PRI * 1000 } };
+    ? { CN: cfg.rushPollIntervalSeconds, HK: cfg.rushHkIntervalSeconds, SZ: cfg.rushSzIntervalSeconds, PRI: cfg.rushPriorityIntervalSeconds }
+    : { CN: cfg.intervalSeconds, HK: cfg.hkIntervalSeconds, SZ: cfg.szIntervalSeconds, PRI: cfg.priorityIntervalSeconds };
+  return { rush, intervals: { CN: s.CN * 1000, HK: s.HK * 1000, SZ: s.SZ * 1000, PRI: s.PRI * 1000 } };
 }
 
 /** 限流冷却：第 n 次连续限流暂停 60s × 2^(n-1)，最长 5 分钟。 */
@@ -87,4 +88,39 @@ export function msUntilNextDue(dueAtByRegion, regionIds, now = Date.now()) {
     if (t !== undefined) min = Math.min(min, t - now);
   }
   return Number.isFinite(min) ? Math.max(0, min) : 0;
+}
+
+// ---------- 通道选择 ----------
+/**
+ * 当前要跑的通道：各监控地区整轮 + 深圳快车道 + 优先通道。
+ *
+ * 纯函数（无副作用、不碰时间），方便离线测试这条规则：
+ *   1. 城市级通道（深圳 / 优先）间隔必须比它所在地区的整轮更短，否则那只是重复请求；
+ *   2. 优先通道和深圳通道查同一个城市、而且不会更勤时，优先通道被顶掉
+ *      （返回的 coveredBySz 让界面能说明原因，而不是让用户以为通道丢了）。
+ *
+ * @param {object} o
+ * @param {string[]} o.active                  可查询的地区（如 ['CN','HK']）
+ * @param {{CN:number,HK:number,SZ:number,PRI:number}} o.intervals pollPlan().intervals
+ * @param {object|null} o.szScope               深圳通道范围（见 ApplePickupClient#szScope）
+ * @param {object|null} o.priorityScope         优先通道范围（见 #priorityScope）
+ * @returns {{ lanes: object[], coveredBySz: boolean, priorityScope: object|null }}
+ */
+export function selectLanes({ active = [], intervals = {}, szScope = null, priorityScope = null } = {}) {
+  const lanes = active.map((r) => ({ id: r, region: r, interval: intervals[r] ?? intervals.CN }));
+  const addCityLane = (id, scope, interval) => {
+    if (!scope || !active.includes(scope.region)) return null;
+    if (!(interval < (intervals[scope.region] ?? Infinity))) return null;
+    const lane = {
+      id, region: scope.region, interval, city: scope.city, covers: Boolean(scope.coversRegion),
+      cities: { [scope.region]: [scope.city] },
+    };
+    lanes.push(lane);
+    return lane;
+  };
+  const szLane = addCityLane('SZ', szScope, intervals.SZ);
+  const coveredBySz = Boolean(szLane && priorityScope && szLane.city === priorityScope.city
+    && szLane.interval <= intervals.PRI);
+  if (!coveredBySz) addCityLane('PRI', priorityScope, intervals.PRI);
+  return { lanes, coveredBySz, priorityScope };
 }

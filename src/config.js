@@ -110,6 +110,7 @@ export function loadConfig() {
 
     intervalSeconds: settings.pollIntervalSeconds,
     hkIntervalSeconds: settings.hkIntervalSeconds,
+    szIntervalSeconds: settings.szIntervalSeconds,
     priorityBoost: settings.priorityBoost,
     priorityIntervalSeconds: settings.priorityIntervalSeconds,
     rushEnabled: settings.rushEnabled,
@@ -117,6 +118,7 @@ export function loadConfig() {
     rushEnd: settings.rushEnd,
     rushPollIntervalSeconds: settings.rushPollIntervalSeconds,
     rushHkIntervalSeconds: settings.rushHkIntervalSeconds,
+    rushSzIntervalSeconds: settings.rushSzIntervalSeconds,
     rushPriorityIntervalSeconds: settings.rushPriorityIntervalSeconds,
     priorityOnly: settings.priorityOnly,
     soldOutNotify: settings.soldOutNotify,

@@ -129,6 +129,7 @@ export const PAGE = `<!doctype html>
   .lane .st { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--muted); }
   .lane .st.run { color:var(--blue); }
   .lane .st.cool { color:var(--red); }
+  .lane .st.skip { color:var(--faint); }
 
   pre.logs { background:#111; color:#d6d6d6; border-radius:10px; padding:12px; max-height:320px; overflow:auto; font-size:11.5px; line-height:1.6;
     white-space:pre-wrap; word-break:break-all; margin:0; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
@@ -211,7 +212,7 @@ export const PAGE = `<!doctype html>
       </div>
     </div>
     <div class="row">
-      <div><label for="priorityBoost">优先通道</label><div class="d">单独只查优先门店所在城市的优先机型；间隔比所在地区整轮更短时才会启用</div></div>
+      <div><label for="priorityBoost">优先通道</label><div class="d">单独只查优先门店所在城市的优先机型；只有监控门店全部同城时可用，跨城市会自动关闭</div></div>
       <label class="switch"><input type="checkbox" id="priorityBoost"><i></i></label>
     </div>
     <table class="speed">
@@ -223,12 +224,15 @@ export const PAGE = `<!doctype html>
         <tr><td>香港全部门店<div class="d">不用定位、一次请求出结果，最低 3 秒</div></td>
           <td><input type="number" id="hk-interval" min="3" max="3600" aria-label="香港常规间隔"><span class="u">秒</span></td>
           <td><input type="number" id="rush-hk-interval" min="3" max="3600" aria-label="香港放货间隔"><span class="u">秒</span></td></tr>
+        <tr><td>深圳通道<div class="d">只查深圳这一个城市（大陆城市必须先提交定位），最低 3 秒</div></td>
+          <td><input type="number" id="sz-interval" min="3" max="3600" aria-label="深圳通道常规间隔"><span class="u">秒</span></td>
+          <td><input type="number" id="rush-sz-interval" min="3" max="3600" aria-label="深圳通道放货间隔"><span class="u">秒</span></td></tr>
         <tr><td>优先门店 + 优先机型<div class="d">最低 5 秒</div></td>
           <td><input type="number" id="pri-interval" min="5" max="3600" aria-label="优先通道常规间隔"><span class="u">秒</span></td>
           <td><input type="number" id="rush-pri-interval" min="5" max="3600" aria-label="优先通道放货间隔"><span class="u">秒</span></td></tr>
       </tbody>
     </table>
-    <div class="d" style="color:var(--faint);font-size:12px;margin-top:10px">被 Apple 限流（HTTP 429 / 503）时会自动暂停该地区 1–5 分钟，避免越查越被封。</div>
+    <div class="d" style="color:var(--faint);font-size:12px;margin-top:10px">深圳通道只在监控门店里有深圳门店、且间隔比大陆整轮更短时才跑；否则深圳门店由大陆整轮覆盖，不会重复请求。被 Apple 限流（HTTP 429 / 503）时会自动暂停该地区 1–5 分钟，避免越查越被封。</div>
   </div>
 
   <div class="card">
@@ -570,16 +574,26 @@ export const PAGE = `<!doctype html>
 
   function renderSettings() {
     var s = settings();
+    var pri = storeById(s.priorityStore);
+    var sameCity = pri && s.watchStores.every(function (id) {
+      var store = storeById(id);
+      return store && store.region === pri.region && store.city === pri.city;
+    });
     el('interval').value = s.pollIntervalSeconds;
     el('hk-interval').value = s.hkIntervalSeconds != null ? s.hkIntervalSeconds : 5;
+    el('sz-interval').value = s.szIntervalSeconds != null ? s.szIntervalSeconds : 5;
     el('pri-interval').value = s.priorityIntervalSeconds != null ? s.priorityIntervalSeconds : 20;
     el('rush-interval').value = s.rushPollIntervalSeconds != null ? s.rushPollIntervalSeconds : 15;
     el('rush-hk-interval').value = s.rushHkIntervalSeconds != null ? s.rushHkIntervalSeconds : 3;
+    el('rush-sz-interval').value = s.rushSzIntervalSeconds != null ? s.rushSzIntervalSeconds : 3;
     el('rush-pri-interval').value = s.rushPriorityIntervalSeconds != null ? s.rushPriorityIntervalSeconds : 8;
     el('rushEnabled').checked = s.rushEnabled !== false;
     el('rushStart').value = s.rushStart || '06:00';
     el('rushEnd').value = s.rushEnd || '09:00';
-    el('priorityBoost').checked = s.priorityBoost !== false;
+    // 同城时自动开启；跨城市时禁用并关闭。
+    el('priorityBoost').checked = Boolean(sameCity);
+    el('priorityBoost').disabled = !sameCity;
+    el('priorityBoost').title = sameCity ? '仅同城市监控门店可启用优先高频通道' : '监控门店跨城市时不可启用优先高频通道';
     el('priorityOnly').checked = !!s.priorityOnly;
     el('repeat').value = s.repeatAlertMinutes;
     el('soldOut').checked = s.soldOutNotify !== false;
@@ -720,7 +734,9 @@ export const PAGE = `<!doctype html>
     el('sched-note').textContent = sc.rush ? '高速' : '常规';
     box.innerHTML = sc.lanes.map(function (l) {
       var cls = 'st', text;
-      if (l.cooldownUntil && l.cooldownUntil > now) {
+      if (l.skipped) {
+        cls += ' skip'; text = l.skipped;
+      } else if (l.cooldownUntil && l.cooldownUntil > now) {
         cls += ' cool'; text = '限流冷却 ' + Math.ceil((l.cooldownUntil - now) / 1000) + 's';
       } else if (l.running) {
         cls += ' run'; text = '查询中…';
@@ -728,7 +744,7 @@ export const PAGE = `<!doctype html>
         var left = Math.max(0, Math.ceil((l.nextAt - now) / 1000));
         text = left ? left + 's 后' : '即将查询';
       } else text = '即将查询';
-      return '<div class="lane"><span class="nm">' + esc(l.label) + '</span><span class="iv">每 ' + esc(l.intervalSeconds) + ' 秒</span>' +
+      return '<div class="lane"' + (l.skipped ? ' style="opacity:.55"' : '') + '><span class="nm">' + esc(l.label) + '</span><span class="iv">每 ' + esc(l.intervalSeconds) + ' 秒</span>' +
         '<span class="' + cls + '">' + text + '</span></div>';
     }).join('');
   }
@@ -777,9 +793,11 @@ export const PAGE = `<!doctype html>
       watchStores: watch,
       pollIntervalSeconds: Number(el('interval').value),
       hkIntervalSeconds: Number(el('hk-interval').value),
+      szIntervalSeconds: Number(el('sz-interval').value),
       priorityIntervalSeconds: Number(el('pri-interval').value),
       rushPollIntervalSeconds: Number(el('rush-interval').value),
       rushHkIntervalSeconds: Number(el('rush-hk-interval').value),
+      rushSzIntervalSeconds: Number(el('rush-sz-interval').value),
       rushPriorityIntervalSeconds: Number(el('rush-pri-interval').value),
       rushEnabled: el('rushEnabled').checked,
       rushStart: el('rushStart').value,
@@ -855,6 +873,7 @@ export const PAGE = `<!doctype html>
         if (settings().watchStores.indexOf(id) < 0) settings().watchStores.unshift(id);
         markDirty();
         updateAddr(); renderWatch();
+        if (typeof renderSettings === 'function') renderSettings();
       };
 
       el('w-city').onchange = function () {
@@ -866,8 +885,15 @@ export const PAGE = `<!doctype html>
         if (!id || sel.disabled) { toast('这个城市不支持查询库存'); return; }
         if (settings().watchStores.indexOf(id) >= 0) { toast('这个门店已经在监控列表里了'); return; }
         settings().watchStores.push(id);
+        var pri = storeById(settings().priorityStore);
+        var added = storeById(id);
+        settings().priorityBoost = Boolean(pri && added && pri.region === added.region && pri.city === added.city &&
+          settings().watchStores.every(function (store) {
+            var s = storeById(store);
+            return s && s.region === pri.region && s.city === pri.city;
+          }));
         markDirty();
-        renderWatch();
+        renderWatch(); renderSettings();
         toast('已添加 ' + sel.options[sel.selectedIndex].textContent);
       };
 
@@ -886,7 +912,8 @@ export const PAGE = `<!doctype html>
       };
 
       // 设置项改动即标记为待保存
-      ['interval', 'hk-interval', 'pri-interval', 'rush-interval', 'rush-hk-interval', 'rush-pri-interval',
+      ['interval', 'hk-interval', 'sz-interval', 'pri-interval', 'rush-interval', 'rush-hk-interval', 'rush-sz-interval',
+        'rush-pri-interval',
         'rushEnabled', 'rushStart', 'rushEnd', 'priorityBoost', 'priorityOnly', 'repeat', 'soldOut'].forEach(function (id) {
         el(id).addEventListener('change', markDirty);
       });
