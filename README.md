@@ -2,8 +2,6 @@
 
 监控 **中国大陆 + 香港** Apple Store 的**门市取货（In-Store Pickup）**库存，有货时发邮件通知你。
 
-> 当前版本：**2.3.0** · [查看 Release](https://github.com/Mansorry101/apple-pickup-monitor/releases/tag/v2.3.0)
-
 **城市、门店、机型、容量、颜色全部在网页界面里用下拉框自己选**，不是写死在代码里。
 
 - 🖱️ **Windows 一键部署**：双击 `一键部署.bat`，第一次问你一次邮箱信息，之后全自动
