@@ -29,7 +29,7 @@ echo "[环境] Node.js $(node -v)  ($(command -v node))"
 # ---------- 2. 依赖 ----------
 echo ""
 echo "[1/3] 安装依赖..."
-if [ -d node_modules ]; then
+if [ -d node_modules/nodemailer ] && [ -d node_modules/undici ]; then
   echo "    依赖已存在，跳过。"
 else
   npm install --no-audit --no-fund

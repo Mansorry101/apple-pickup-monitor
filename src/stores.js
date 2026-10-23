@@ -789,6 +789,34 @@ export const CITIES = (() => {
 
 export const CITY_BY_KEY = Object.fromEntries(CITIES.map((c) => [c.key, c]));
 
+/**
+ * 同城高速通道的城市判定（全国任意城市通用，不再写死深圳）。
+ *
+ *   - city：快车道要查的大陆城市。优先门店在大陆就取它所在城市，否则取第一个大陆监控门店的城市；
+ *           没有大陆门店时为 null（香港整轮本来就是一次请求、5 秒一轮，不需要城市快车道）。
+ *   - sameCity：优先门店 + 全部监控门店都在同一个城市。
+ *   - sameCityFast：同城且该城市在大陆 → 开启「同城高速模式」：只跑这一条城市通道，
+ *           速度与香港同级（常规 5 秒 / 放货 3 秒），不再跑大陆整轮。
+ *
+ * @returns {{ city: string|null, cityKey: string|null, sameCity: boolean, sameCityFast: boolean }}
+ */
+export function fastLaneInfo(storeIds = [], priorityStore = null) {
+  const ids = [...new Set([priorityStore, ...(storeIds || [])])].filter((id) => STORE_BY_ID[id]);
+  const stores = ids.map((id) => STORE_BY_ID[id]);
+  const first = STORE_BY_ID[priorityStore] || stores[0] || null;
+  const sameCity = Boolean(first) && stores.every((s) => s.region === first.region && s.city === first.city);
+  const pri = STORE_BY_ID[priorityStore];
+  const cnStore = pri && REGIONS[pri.region].needsLocation ? pri
+    : stores.find((s) => REGIONS[s.region].needsLocation && REGIONS[s.region].onlineStore) || null;
+  const city = cnStore ? cnStore.city : null;
+  return {
+    city,
+    cityKey: cnStore ? CITY_KEY(cnStore.region, cnStore.city) : null,
+    sameCity,
+    sameCityFast: sameCity && Boolean(cnStore) && cnStore.region === first.region && cnStore.city === first.city,
+  };
+}
+
 /** 门店的展示名：城市 + 门店名 */
 export function storeDisplay(id) {
   const s = STORE_BY_ID[id];

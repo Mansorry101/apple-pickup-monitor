@@ -29,6 +29,7 @@ console.log('\n=== 旧版配置自动迁移（v1 → v2）===');
 {
   const r = normalizeSettings({
     version: 1,
+    shenzhenOnly: false,
     priorityStore: 'R499',
     cantonOnly: true,
     targets: [
@@ -44,18 +45,52 @@ console.log('\n=== 旧版配置自动迁移（v1 → v2）===');
   console.log('  ✓ 旧配置的 cantonOnly / partNumber 都被正确迁移');
 }
 
-console.log('\n=== 默认值：盯深圳 ===');
+console.log('\n=== 默认值：深圳 3 家门店（同城 → 同城高速模式）===');
 {
+  assert.equal(DEFAULT_SETTINGS.shenzhenOnly, undefined, '不再有深圳专属锁定');
+  assert.equal(normalizeSettings({}).sameCityFast, true, '默认 3 家都在深圳 → 同城高速模式');
   assert.equal(DEFAULT_SETTINGS.priorityStore, 'R484');
-  assert.deepEqual(DEFAULT_SETTINGS.watchStores, ['R484'], '默认只监控优先门店一个，不替用户多选');
+  assert.deepEqual(DEFAULT_SETTINGS.watchStores, ['R484', 'R761', 'R793'], '默认监控深圳 3 家门店');
+  assert.ok(DEFAULT_SETTINGS.watchStores.every((id) => STORE_BY_ID[id].city === '深圳'),
+    '默认监控门店必须全部在深圳');
   assert.equal(STORE_BY_ID[DEFAULT_SETTINGS.priorityStore].city, '深圳');
   for (const t of DEFAULT_SETTINGS.targets) {
     assert.ok(Object.values(t.parts).every((pn) => pn.endsWith('CH/A')),
       '默认机型必须是大陆料号（深圳门店只卖 CH/A）：' + JSON.stringify(t.parts));
   }
-  assert.equal(DEFAULT_SETTINGS.szIntervalSeconds, 5, '深圳通道默认 5 秒');
-  assert.equal(DEFAULT_SETTINGS.rushSzIntervalSeconds, 3, '放货时段深圳通道默认 3 秒');
-  console.log(`  ✓ 默认优先门店 ${DEFAULT_SETTINGS.priorityStore}（深圳），机型料号为大陆版，深圳通道 5 秒 / 放货 3 秒`);
+  assert.equal(DEFAULT_SETTINGS.szIntervalSeconds, 5, '深圳通道默认 5 秒（与香港同速）');
+  assert.equal(DEFAULT_SETTINGS.rushSzIntervalSeconds, 3, '放货时段深圳通道默认 3 秒（与香港同速）');
+  console.log(`  ✓ 默认 ${DEFAULT_SETTINGS.watchStores.join(' / ')}，优先 ${DEFAULT_SETTINGS.priorityStore}，深圳通道 5 秒 / 放货 3 秒`);
+}
+
+console.log('\n=== 全国城市可选 + 同城高速模式 ===');
+{
+  // 全国任意城市 / 香港都能当优先门店（不再被拉回深圳）
+  assert.equal(normalizeSettings({ priorityStore: 'R499' }).priorityStore, 'R499', '香港门店可以当优先门店');
+  assert.equal(normalizeSettings({ priorityStore: 'R401' }).priorityStore, 'R401', '上海门店可以当优先门店');
+  // 旧配置里残留的 shenzhenOnly: true 不再锁定
+  assert.equal(normalizeSettings({ shenzhenOnly: true, priorityStore: 'R320', watchStores: ['R320'] }).priorityStore, 'R320');
+
+  // 同一个大陆城市（北京 3 家）→ 同城高速模式，优先通道关闭（已被城市通道覆盖）
+  const bj = normalizeSettings({ priorityStore: 'R320', watchStores: ['R320', 'R448', 'R388'] });
+  assert.deepEqual(bj.watchStores, ['R320', 'R448', 'R388']);
+  assert.equal(bj.sameCityFast, true, '北京同城应启用同城高速模式');
+  assert.equal(bj.priorityBoost, false, '同城高速模式下优先通道自动关闭');
+
+  // 上海 + 香港：跨地区 → 全国查询
+  const mix = normalizeSettings({ priorityStore: 'R401', watchStores: ['R401', 'R499'] });
+  assert.deepEqual(mix.watchStores, ['R401', 'R499'], '允许跨城市 / 跨地区监控');
+  assert.equal(mix.sameCityFast, false, '跨地区不是同城高速');
+  // 上海 + 北京：跨城市 → 全国查询
+  assert.equal(normalizeSettings({ priorityStore: 'R401', watchStores: ['R401', 'R320'] }).sameCityFast, false);
+  // 只盯香港：香港整轮本身就是快车道，不算同城高速（不需要定位）
+  assert.equal(normalizeSettings({ priorityStore: 'R499', watchStores: ['R499'] }).sameCityFast, false);
+
+  // 城市通道间隔可独立设置，下限 3 秒
+  const speed = normalizeSettings({ szIntervalSeconds: 4, rushSzIntervalSeconds: 2 });
+  assert.equal(speed.szIntervalSeconds, 4);
+  assert.equal(speed.rushSzIntervalSeconds, 3, '放货间隔下限 3 秒');
+  console.log('  ✓ 全国城市 / 香港都可选；同城（大陆）自动启用同城高速，跨城市恢复全国查询');
 }
 
 console.log('\n=== 料号校验 ===');
@@ -94,47 +129,49 @@ console.log('\n=== 显式清空 vs 未提供 ===');
   assert.equal(normalizeSettings({ targets: [] }).targets.length, 0, '显式传空数组应保持为空');
   console.log('  ✓ 显式清空 targets 被尊重');
   assert.equal(
-    normalizeSettings({ priorityStore: 'R428' }).targets.length,
+    normalizeSettings({ shenzhenOnly: false, priorityStore: 'R428' }).targets.length,
     DEFAULT_SETTINGS.targets.length,
     '未提供 targets 时应用默认值',
   );
   console.log('  ✓ 未提供 targets 时回退默认值');
 }
 
-console.log('\n=== 门店校验 ===');
+console.log('\n=== 门店校验（关闭深圳专属模式时）===');
 {
-  assert.equal(normalizeSettings({ priorityStore: 'R428' }).priorityStore, 'R428', '香港门店可用');
-  assert.equal(normalizeSettings({ priorityStore: 'R401' }).priorityStore, 'R401', '大陆门店可用');
-  assert.equal(normalizeSettings({ priorityStore: 'R484' }).priorityStore, 'R484', '深圳门店可用');
-  assert.equal(normalizeSettings({ priorityStore: 'R999' }).priorityStore, DEFAULT_SETTINGS.priorityStore, '非法门店应回退');
-  assert.equal(normalizeSettings({ priorityStore: 'hack' }).priorityStore, DEFAULT_SETTINGS.priorityStore);
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  assert.equal(g({ priorityStore: 'R428' }).priorityStore, 'R428', '香港门店可用');
+  assert.equal(g({ priorityStore: 'R401' }).priorityStore, 'R401', '大陆门店可用');
+  assert.equal(g({ priorityStore: 'R484' }).priorityStore, 'R484', '深圳门店可用');
+  assert.equal(g({ priorityStore: 'R999' }).priorityStore, DEFAULT_SETTINGS.priorityStore, '非法门店应回退');
+  assert.equal(g({ priorityStore: 'hack' }).priorityStore, DEFAULT_SETTINGS.priorityStore);
   console.log('  ✓ 合法门店保留，非法门店回退到默认优先门店');
 
   assert.equal(
-    normalizeSettings({ priorityStore: 'R697' }).priorityStore,
+    g({ priorityStore: 'R697' }).priorityStore,
     DEFAULT_SETTINGS.priorityStore,
     '澳门门店没有网上商店，不能作为优先门店',
   );
   console.log('  ✓ 澳门门店被拒绝作为优先门店（无网上商店）');
 }
 
-console.log('\n=== 监控门店列表清洗 ===');
+console.log('\n=== 监控门店列表清洗（关闭深圳专属模式时）===');
 {
-  const r = normalizeSettings({ priorityStore: 'R401', watchStores: ['R401', 'R499', 'R499', 'R697', 'R888', ''] });
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  const r = g({ priorityStore: 'R401', watchStores: ['R401', 'R499', 'R499', 'R697', 'R888', ''] });
   assert.deepEqual(r.watchStores, ['R401', 'R499'], '应去重、剔除澳门与非法门店');
   console.log('  ✓ 去重 + 剔除澳门/非法门店');
 
   // 优先门店必须出现在监控列表里
-  const r2 = normalizeSettings({ priorityStore: 'R499', watchStores: ['R401'] });
+  const r2 = g({ priorityStore: 'R499', watchStores: ['R401'] });
   assert.equal(r2.watchStores[0], 'R499', '优先门店应被补进监控列表的开头');
   console.log('  ✓ 优先门店始终包含在监控列表中');
 
-  const r3 = normalizeSettings({ priorityStore: 'R401', watchStores: [] });
+  const r3 = g({ priorityStore: 'R401', watchStores: [] });
   assert.deepEqual(r3.watchStores, ['R401']);
   console.log('  ✓ 空列表回填优先门店');
 
   // 回归：换优先门店时，不能把默认门店（R484）也悄悄塞进监控列表
-  const r4 = normalizeSettings({ priorityStore: 'R401' });
+  const r4 = g({ priorityStore: 'R401' });
   assert.deepEqual(r4.watchStores, ['R401'], '只改优先门店不应扩大监控范围');
   console.log('  ✓ 只改优先门店不会夹带默认门店');
 }
@@ -151,23 +188,26 @@ console.log('\n=== 数值范围钳制 ===');
   assert.equal(normalizeSettings({ hkIntervalSeconds: 999999 }).hkIntervalSeconds, 86400);
   assert.equal(normalizeSettings({ hkIntervalSeconds: 'abc' }).hkIntervalSeconds, 5, '香港间隔缺省应为 5 秒');
   assert.equal(normalizeSettings({}).hkIntervalSeconds, 5, '没配置时香港间隔默认 5 秒，保证香港查得够勤');
-  // 深圳通道：和香港同级的下限（3 秒），默认 5 秒
-  assert.equal(normalizeSettings({ szIntervalSeconds: 1 }).szIntervalSeconds, 3, '深圳通道间隔过低应被抬到 3');
-  assert.equal(normalizeSettings({ szIntervalSeconds: 5 }).szIntervalSeconds, 5);
-  assert.equal(normalizeSettings({ szIntervalSeconds: 'abc' }).szIntervalSeconds, 5, '深圳通道缺省应为 5 秒');
-  assert.equal(normalizeSettings({}).szIntervalSeconds, 5, '没配置时深圳通道默认 5 秒');
-  assert.equal(normalizeSettings({ rushSzIntervalSeconds: 1 }).rushSzIntervalSeconds, 3, '放货时段深圳通道也不低于 3 秒');
+  // 深圳通道：和香港同级的下限（3 秒），默认 5 秒（关闭深圳专属模式时独立生效）
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  assert.equal(g({ szIntervalSeconds: 1 }).szIntervalSeconds, 3, '深圳通道间隔过低应被抬到 3');
+  assert.equal(g({ szIntervalSeconds: 5 }).szIntervalSeconds, 5);
+  assert.equal(g({ szIntervalSeconds: 'abc' }).szIntervalSeconds, 5, '深圳通道缺省应为 5 秒');
+  assert.equal(g({}).szIntervalSeconds, 5, '没配置时深圳通道默认 5 秒');
+  assert.equal(g({ rushSzIntervalSeconds: 1 }).rushSzIntervalSeconds, 3, '放货时段深圳通道也不低于 3 秒');
   // 香港间隔独立于大陆间隔，互不影响
-  const both = normalizeSettings({ pollIntervalSeconds: 120, hkIntervalSeconds: 5 });
+  const both = g({ pollIntervalSeconds: 120, hkIntervalSeconds: 5 });
   assert.equal(both.pollIntervalSeconds, 120);
   assert.equal(both.hkIntervalSeconds, 5);
   console.log('  ✓ 轮询间隔 / 香港间隔 / 深圳通道间隔 / 重复提醒 / 端口 都被正确钳制');
 
   // 放货时段与优先通道
-  const d = normalizeSettings({});
+  const d = g({});
   assert.equal(d.rushEnabled, true); assert.equal(d.rushStart, '06:00'); assert.equal(d.rushEnd, '09:00');
-  assert.equal(d.priorityBoost, true); assert.equal(d.priorityIntervalSeconds, 20);
-  const r = normalizeSettings({ rushStart: '6:5', rushEnd: '7:30', rushPollIntervalSeconds: 1, rushHkIntervalSeconds: 1,
+  // 默认深圳同城 → 同城高速模式，优先通道被城市通道覆盖而关闭；只盯香港（同城、非大陆）时优先通道照常可用
+  assert.equal(d.priorityBoost, false); assert.equal(d.priorityIntervalSeconds, 20);
+  assert.equal(g({ priorityStore: 'R499', watchStores: ['R499'] }).priorityBoost, true);
+  const r = g({ rushStart: '6:5', rushEnd: '7:30', rushPollIntervalSeconds: 1, rushHkIntervalSeconds: 1,
     rushPriorityIntervalSeconds: 1, priorityIntervalSeconds: 1, rushEnabled: false, priorityBoost: false });
   assert.equal(r.rushStart, '06:00', '格式不对回到默认'); assert.equal(r.rushEnd, '07:30');
   assert.equal(r.rushPollIntervalSeconds, 15, '放货时段大陆也不低于 15 秒');

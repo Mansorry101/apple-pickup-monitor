@@ -138,6 +138,8 @@ export const PAGE = `<!doctype html>
   #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .mailbox { background:var(--soft); border-radius:11px; padding:11px 13px; font-size:13px; }
   .warnbox { background:var(--amber-soft); border-left:3px solid #ff9f0a; border-radius:10px; padding:11px 13px; font-size:12.5px; margin-bottom:14px; }
+  .notebox { background:var(--blue-soft); border-left:3px solid var(--blue); border-radius:10px; padding:11px 13px; font-size:12.5px; margin-bottom:14px; line-height:1.65; }
+  .notebox b { font-weight:600; }
   .kbd { font-size:11px; color:var(--faint); }
 </style>
 </head>
@@ -145,7 +147,7 @@ export const PAGE = `<!doctype html>
 <div class="topbar"><div class="topbar-in">
   <div class="brand">
     <div class="logo">A</div>
-    <div><h1>Apple 取货监控</h1><div class="sub">中国大陆 / 香港 Apple Store 门市取货库存，有货时邮件通知</div></div>
+    <div><h1>Apple 取货监控</h1><div class="sub" id="sub-title">全国城市 / 香港 Apple Store 门市取货库存，有货时邮件 + 手机推送通知</div></div>
   </div>
   <span id="mode-chip" class="chip normal" title="查询节奏">常规查询</span>
   <span class="pill" title="运行状态"><span id="s-dot" class="dot idle"></span><span id="s-text">加载中…</span></span>
@@ -156,6 +158,7 @@ export const PAGE = `<!doctype html>
 <div class="layout">
 <main>
   <div id="catalog-warn"></div>
+  <div id="mode-note"></div>
 
   <div class="card">
     <div class="card-h"><h2><span class="step">1</span>优先取货门店</h2></div>
@@ -169,8 +172,8 @@ export const PAGE = `<!doctype html>
 
   <div class="card">
     <div class="card-h"><h2><span class="step">2</span>同时监控的门店（可选）</h2></div>
-    <div class="hint">这些门店有货时发「备选」邮件。只查这里列出的门店，Apple 顺带返回的其他门店一律忽略。</div>
-    <div class="picker">
+    <div class="hint" id="w-hint">这些门店有货时发「备选」邮件。只查这里列出的门店，Apple 顺带返回的其他门店一律忽略。</div>
+    <div class="picker" id="w-picker">
       <label class="fl"><span>城市</span><select id="w-city"></select></label>
       <label class="fl"><span>门店</span><select id="w-store"></select></label>
       <button class="btn ghost" id="btn-addstore">添加门店</button>
@@ -224,15 +227,15 @@ export const PAGE = `<!doctype html>
         <tr><td>香港全部门店<div class="d">不用定位、一次请求出结果，最低 3 秒</div></td>
           <td><input type="number" id="hk-interval" min="3" max="3600" aria-label="香港常规间隔"><span class="u">秒</span></td>
           <td><input type="number" id="rush-hk-interval" min="3" max="3600" aria-label="香港放货间隔"><span class="u">秒</span></td></tr>
-        <tr><td>深圳通道<div class="d">只查深圳这一个城市（大陆城市必须先提交定位），最低 3 秒</div></td>
-          <td><input type="number" id="sz-interval" min="3" max="3600" aria-label="深圳通道常规间隔"><span class="u">秒</span></td>
-          <td><input type="number" id="rush-sz-interval" min="3" max="3600" aria-label="深圳通道放货间隔"><span class="u">秒</span></td></tr>
+        <tr><td>同城高速通道<div class="d">只查优先门店所在的那一个大陆城市（任意城市）；监控门店全部同城时它是唯一通道，与香港同速</div></td>
+          <td><input type="number" id="sz-interval" min="3" max="3600" aria-label="同城高速通道常规间隔"><span class="u">秒</span></td>
+          <td><input type="number" id="rush-sz-interval" min="3" max="3600" aria-label="同城高速通道放货间隔"><span class="u">秒</span></td></tr>
         <tr><td>优先门店 + 优先机型<div class="d">最低 5 秒</div></td>
           <td><input type="number" id="pri-interval" min="5" max="3600" aria-label="优先通道常规间隔"><span class="u">秒</span></td>
           <td><input type="number" id="rush-pri-interval" min="5" max="3600" aria-label="优先通道放货间隔"><span class="u">秒</span></td></tr>
       </tbody>
     </table>
-    <div class="d" style="color:var(--faint);font-size:12px;margin-top:10px">深圳通道只在监控门店里有深圳门店、且间隔比大陆整轮更短时才跑；否则深圳门店由大陆整轮覆盖，不会重复请求。被 Apple 限流（HTTP 429 / 503）时会自动暂停该地区 1–5 分钟，避免越查越被封。</div>
+    <div class="d" style="color:var(--faint);font-size:12px;margin-top:10px">监控门店全部在同一个大陆城市时自动进入「同城高速模式」：只有该城市的通道在跑（常规 / 放货时段与香港同速），大陆整轮与香港整轮都不会发出请求。监控门店跨城市 / 跨地区时恢复全国查询，同城高速通道只在间隔比大陆整轮更短时才跑。被 Apple 限流（HTTP 429 / 503）时会自动暂停该地区 1–5 分钟，避免越查越被封。</div>
   </div>
 
   <div class="card">
@@ -254,6 +257,12 @@ export const PAGE = `<!doctype html>
     <div class="actions">
       <button class="btn ghost sm" id="btn-testmail">发送测试邮件</button>
       <span class="kbd">邮箱凭据存在 .env 里，为安全起见不在此页面显示 / 修改。</span>
+    </div>
+    <div class="sec">手机推送（Bark）</div>
+    <div class="mailbox" id="pushbox">—</div>
+    <div class="actions">
+      <button class="btn ghost sm" id="btn-testpush">发送测试推送</button>
+      <span class="kbd">推送 key 存在 .env 里；修改请双击「配置手机推送.bat」。</span>
     </div>
   </div>
   <div class="kbd" id="save-hint" style="text-align:center"></div>
@@ -313,6 +322,24 @@ export const PAGE = `<!doctype html>
   function dir() { return state.boot.directory || { regions: [], cities: [], stores: [] }; }
   function cat() { return state.boot.catalog || { families: [], variants: [] }; }
   function settings() { return state.boot.settings; }
+  /**
+   * 同城高速模式（与后端 stores.fastLaneInfo 同一规则）：优先门店 + 监控门店全部在同一个大陆城市时开启。
+   * 按界面上当前的选择实时计算，加 / 删门店后立刻反映；全国任意城市都适用。
+   */
+  function sameCityInfo() {
+    var s = settings();
+    if (!s) return { fast: false, city: '' };
+    var pri = (el('p-store') && el('p-store').value) || s.priorityStore;
+    var ids = [pri].concat(s.watchStores || []);
+    var first = storeById(pri) || storeById(ids[1]);
+    if (!first) return { fast: false, city: '' };
+    var same = ids.every(function (id) {
+      var st = storeById(id);
+      return !st || (st.region === first.region && st.city === first.city);
+    });
+    return { fast: same && first.region === 'CN', city: first.city };
+  }
+  function isSameCityFast() { return sameCityInfo().fast; }
   function markDirty() {
     state.dirty = true;
     var b = el('btn-save');
@@ -368,6 +395,7 @@ export const PAGE = `<!doctype html>
   function variantName(v) { return v ? (v.family + ' ' + v.capacity + ' ' + (v.colorZh || v.color)) : ''; }
 
   function cityOptgroups() {
+    // 全国城市都可选（不再只留深圳）
     var regions = dir().regions || [];
     var cities = dir().cities || [];
     var html = '';
@@ -445,7 +473,8 @@ export const PAGE = `<!doctype html>
         '<div><div>' + esc(s.city) + ' · ' + esc(s.name) +
         (isPri ? '<span class="tag">优先</span>' : '') + '</div>' +
         '<div class="meta">' + esc(s.province) + ' · ' + esc(s.address) + '</div></div>' +
-        (isPri ? '<div class="meta">主目标</div>' : '<button class="x" data-rm="' + esc(id) + '" aria-label="移除门店">移除</button>') +
+        (isPri ? '<div class="meta">主目标</div>'
+          : '<button class="x" data-rm="' + esc(id) + '" aria-label="移除门店">移除</button>') +
         '</div>';
     }).join('');
     Array.prototype.forEach.call(el('w-list').querySelectorAll('.x'), function (b) {
@@ -453,13 +482,15 @@ export const PAGE = `<!doctype html>
         var id = b.getAttribute('data-rm');
         settings().watchStores = settings().watchStores.filter(function (x) { return x !== id; });
         markDirty();
-        renderWatch();
+        renderWatch(); renderSettings();
       };
     });
     renderTargets();
     if (!settings().watchStores.length) {
       el('w-list').innerHTML = '<div class="empty">还没有监控门店。</div>';
     }
+    // 加 / 删门店、换优先门店后，同城高速模式可能切换：说明条和输入框状态跟着更新
+    renderMode();
   }
 
   function fillFamilySelect() {
@@ -590,10 +621,13 @@ export const PAGE = `<!doctype html>
     el('rushEnabled').checked = s.rushEnabled !== false;
     el('rushStart').value = s.rushStart || '06:00';
     el('rushEnd').value = s.rushEnd || '09:00';
-    // 同城时自动开启；跨城市时禁用并关闭。
-    el('priorityBoost').checked = Boolean(sameCity);
-    el('priorityBoost').disabled = !sameCity;
-    el('priorityBoost').title = sameCity ? '仅同城市监控门店可启用优先高频通道' : '监控门店跨城市时不可启用优先高频通道';
+    // 同城时自动开启；跨城市时禁用并关闭。同城高速模式下城市通道已覆盖同一批门店，优先通道无意义。
+    var fast = isSameCityFast();
+    el('priorityBoost').checked = !fast && Boolean(sameCity);
+    el('priorityBoost').disabled = fast || !sameCity;
+    el('priorityBoost').title = fast
+      ? '同城高速模式下城市通道已覆盖同一批门店，无需优先通道'
+      : sameCity ? '仅同城市监控门店可启用优先高频通道' : '监控门店跨城市时不可启用优先高频通道';
     el('priorityOnly').checked = !!s.priorityOnly;
     el('repeat').value = s.repeatAlertMinutes;
     el('soldOut').checked = s.soldOutNotify !== false;
@@ -619,6 +653,33 @@ export const PAGE = `<!doctype html>
     }
     el('mailbox').innerHTML = '发件邮箱：<b>' + esc(m.from) + '</b><br>收件邮箱：<b>' +
       esc((m.to || []).join('、')) + '</b>' + smtp;
+  }
+
+  function renderPush() {
+    var box = el('pushbox'), btn = el('btn-testpush');
+    if (!box) return;
+    var p = state.boot.push || {};
+    var ps = (state.boot.status || {}).push || {};
+    if (!p.configured) {
+      box.innerHTML = '<span style="color:var(--faint)">未开启。</span> 手机装 Bark 后，双击「配置手机推送.bat」即可开启；邮件通知照常。';
+      if (btn) btn.disabled = true;
+      return;
+    }
+    if (btn && btn.textContent !== '发送中…') btn.disabled = false;
+    var line;
+    if (ps.ok === true) {
+      line = '<div style="color:var(--green);margin-top:4px">✅ 推送正常' +
+        (ps.checkedAt ? '（' + esc(ps.checkedAt) + '）' : '') +
+        (ps.error ? '<br><span style="color:var(--red)">' + esc(ps.error) + '</span>' : '') + '</div>';
+    } else if (ps.ok === false) {
+      line = '<div style="color:var(--red);margin-top:4px">❌ 推送失败：' + esc(ps.error || '未知错误') +
+        '<br>邮件通知不受影响。请确认 key 正确、手机能上网，再点「发送测试推送」重试。</div>';
+    } else {
+      line = '<div style="color:var(--faint);margin-top:4px">尚未推送过：点「发送测试推送」，手机应在几秒内收到。</div>';
+    }
+    box.innerHTML = '设备：<b>' + esc((p.devices || []).join('、')) + '</b>' +
+      '<br>提醒方式：<b>' + (p.critical ? '重要警告（静音也响）' : '时效性通知') + '</b>' +
+      '　点开打开：<b>' + (p.open === 'bag' ? '购物袋' : '商品购买页') + '</b>' + line;
   }
 
   function renderStatus() {
@@ -759,6 +820,48 @@ export const PAGE = `<!doctype html>
     box.innerHTML = '<div class="warnbox">机型目录尚未拉取。点「刷新机型目录」从 Apple 官网获取最新机型、容量、颜色和价格。</div>';
   }
 
+  /**
+   * 模式说明：全国城市都能选；监控门店全部同城（大陆）时自动进入同城高速模式。
+   * 规则与后端 stores.fastLaneInfo 一致，按界面当前的选择实时显示。
+   */
+  function renderMode() {
+    var note = el('mode-note');
+    if (!note) return;
+    var info = sameCityInfo();
+    var fast = info.fast;
+    var s = settings() || {};
+    var count = (s.watchStores || []).length;
+    note.innerHTML = fast
+      ? '<div class="notebox"><b>同城高速模式 · ' + esc(info.city) + '</b>：监控的 ' + esc(count) +
+        ' 家门店都在' + esc(info.city) + '，只查这一个城市，速度与香港同级：常规 ' + esc(s.szIntervalSeconds) +
+        ' 秒，放货时段 ' + esc(s.rushSzIntervalSeconds) + ' 秒。大陆整轮 / 香港整轮不发请求。<br>' +
+        '加入其他城市或香港的门店后，自动切换为全国查询。</div>'
+      : '<div class="notebox"><b>全国查询模式</b>：监控门店跨城市 / 跨地区，大陆按城市逐个查询（整轮间隔见下方）' +
+        (info.city ? '，' + esc(info.city) + '另有一条同城高速通道' : '') +
+        '。把监控门店都选在同一个大陆城市即可开启同城高速模式。</div>';
+
+    var picker = el('w-picker');
+    if (picker) picker.style.display = '';
+    var hint = el('w-hint');
+    if (hint) {
+      hint.textContent = '这些门店有货时发「备选」邮件。只查这里列出的门店，Apple 顺带返回的其他门店一律忽略。' +
+        '门店全部在同一个大陆城市时自动启用同城高速模式。';
+    }
+    var sub = el('sub-title');
+    if (sub) {
+      sub.textContent = fast
+        ? info.city + ' ' + count + ' 家 Apple Store 门市取货库存（同城高速），有货时邮件 + 手机推送通知'
+        : '全国城市 / 香港 Apple Store 门市取货库存，有货时邮件 + 手机推送通知';
+    }
+    // 同城高速模式下大陆 / 香港 / 优先通道不跑：输入框置灰（保留原值，跨城市时恢复）
+    ['interval', 'rush-interval', 'hk-interval', 'rush-hk-interval', 'pri-interval', 'rush-pri-interval'].forEach(function (id) {
+      var input = el(id);
+      if (!input) return;
+      input.disabled = fast;
+      input.title = fast ? '同城高速模式下不查询这条通道' : '';
+    });
+  }
+
   function refreshLogs() {
     if (state.logsPaused) return Promise.resolve();
     return api('/api/logs?lines=150').then(function (r) {
@@ -778,8 +881,9 @@ export const PAGE = `<!doctype html>
     return api('/api/status').then(function (b) {
       state.boot.status = b.status;
       state.boot.mail = b.mail;
+      if (b.push) state.boot.push = b.push;
       if (b.now) state.clockOffset = b.now - Date.now();
-      renderStatus(); renderMail(); renderSchedule();
+      renderStatus(); renderMail(); renderPush(); renderSchedule();
     });
   }
 
@@ -818,7 +922,7 @@ export const PAGE = `<!doctype html>
         state.boot.settings = r.settings;
         state.dirty = false;
         btn.classList.remove('dirty');
-        renderWatch(); refreshModelSelects(); renderTargets(); renderSettings();
+        renderWatch(); refreshModelSelects(); renderTargets(); renderSettings(); renderMode();
         toast('已保存，监控即刻按新配置运行');
         return refreshStatus();
       }
@@ -855,7 +959,9 @@ export const PAGE = `<!doctype html>
       refreshModelSelects();
       renderTargets();
       renderSettings();
+      renderMode();
       renderMail();
+      renderPush();
       renderStatus();
       renderSchedule();
       refreshLogs();
@@ -936,6 +1042,15 @@ export const PAGE = `<!doctype html>
         return post('/api/test-email').then(function (r) {
           toast(r.ok ? '测试邮件已发送，请查收（含垃圾箱）' : '发送失败：' + r.error);
         }).finally(function () { b.disabled = false; b.textContent = '发送测试邮件'; });
+      };
+      el('btn-testpush').onclick = function () {
+        var b = this; b.disabled = true; b.textContent = '发送中…';
+        return post('/api/test-push').then(function (r) {
+          toast(r.ok
+            ? '测试推送已发出（' + r.sent + ' 台设备），手机应在几秒内收到' + (r.failed && r.failed.length ? '；部分失败：' + r.failed.join('；') : '')
+            : '推送失败：' + r.error);
+        }).catch(function (e) { toast('推送失败：' + e.message); })
+          .finally(function () { b.textContent = '发送测试推送'; b.disabled = false; refreshStatus(); });
       };
       el('btn-refresh').onclick = function () {
         var b = this; b.disabled = true; b.textContent = '抓取中…（约 20 秒）';

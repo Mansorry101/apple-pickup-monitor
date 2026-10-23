@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './constants.js';
-import { STORES, STORE_BY_ID, REGIONS, SEARCHABLE_REGIONS } from './stores.js';
+import { STORES, STORE_BY_ID, REGIONS, SEARCHABLE_REGIONS, fastLaneInfo } from './stores.js';
 import { loadSettings, CATALOG_CACHE, regionsOfStores, scopeProductsByStores } from './settings.js';
 import { loadCatalogCache, findVariantByKey, findVariant, FAMILY_SLUGS } from './catalog.js';
 
@@ -73,6 +73,7 @@ export function loadConfig() {
 
   const watchStores = settings.watchStores.filter((id) => STORE_BY_ID[id]);
   const watchRegions = regionsOfStores(watchStores);
+  const fastLane = fastLaneInfo(watchStores, settings.priorityStore);
 
   const priorityStoreFor = {};
   const defaultStoreFor = {};
@@ -98,6 +99,10 @@ export function loadConfig() {
     settings,
     catalog,
 
+    // 同城高速模式：监控门店全部在同一个大陆城市时，只跑该城市一条通道（与香港同速），
+    // 大陆整轮 / 香港整轮都不派发（见 scheduler.selectLanes）。跨城市时恢复全国查询。
+    sameCityFast: fastLane.sameCityFast,
+    fastCity: fastLane.city,
     priorityStore: settings.priorityStore,
     priorityStoreInfo: STORE_BY_ID[settings.priorityStore] || null,
     priorityStoreRegion: STORE_BY_ID[settings.priorityStore]?.region || null,
@@ -128,6 +133,8 @@ export function loadConfig() {
     catalogCache: CATALOG_CACHE,
 
     requestTimeoutMs: num(env.REQUEST_TIMEOUT_MS, 25000),
+    // 库存查询（availability-message）单独用短超时：正常 1 秒内返回，卡住就尽早放弃重试
+    queryTimeoutMs: Math.min(num(env.QUERY_TIMEOUT_MS, 8000), num(env.REQUEST_TIMEOUT_MS, 25000)),
     maxRetries: num(env.MAX_RETRIES, 6),
     sessionRefreshMinutes: num(env.SESSION_REFRESH_MINUTES, 30),
     userAgent:
@@ -147,6 +154,15 @@ export function loadConfig() {
         .split(/[,;\s]+/)
         .map((s) => s.trim())
         .filter(Boolean),
+    },
+
+    // 手机推送（Bark），见 push.js。没填 BARK_KEY 就不推送，只发邮件。
+    push: {
+      keys: [...new Set((env.BARK_KEY || '').split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean))],
+      server: (env.BARK_SERVER || 'https://api.day.app').trim().replace(/\/+$/, ''),
+      critical: bool(env.BARK_CRITICAL, false),
+      open: String(env.BARK_OPEN || '').trim().toLowerCase() === 'bag' ? 'bag' : 'product',
+      sound: (env.BARK_SOUND || '').trim(),
     },
   };
 }

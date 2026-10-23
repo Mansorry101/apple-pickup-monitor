@@ -57,7 +57,8 @@ Say "✓ Node.js $nodeVer  ($nodePath)" 'Green'
 
 # ---------- 2. 依赖 ----------
 $nm = Join-Path $ProjectDir 'node_modules'
-if (Test-Path $nm) {
+# 只要缺任何一个依赖（例如升级后新增的 undici）就重新安装
+if ((Test-Path (Join-Path $nm 'nodemailer')) -and (Test-Path (Join-Path $nm 'undici'))) {
   Say "✓ 依赖已存在，跳过 npm install" 'Green'
 } else {
   if ($DryRun) {

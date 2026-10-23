@@ -23,7 +23,7 @@
  * 绝不把"接口坏了"当成"没货"。
  */
 import { scopeProductsByStores } from './settings.js';
-import { REGIONS, STORE_BY_ID, storeLabel, CITY_KEY, CITY_BY_KEY } from './stores.js';
+import { REGIONS, STORE_BY_ID, storeLabel, CITY_KEY, CITY_BY_KEY, fastLaneInfo } from './stores.js';
 import { throttleBackoffMs } from './scheduler.js';
 
 export { storeLabel };
@@ -31,13 +31,37 @@ export { storeLabel };
 const MAX_PARTS_PER_REQUEST = 12; // 接口实测可用 12，减少机型较多时的分批请求
 const CITY_QUERY_CONCURRENCY = 3;
 const BATCH_CONCURRENCY = 2; // 同一城市会话内的分批请求并发数（机型 > 11 个时才有多批）
+const SPARE_RETRY_MS = 60_000; // 后台预建新会话失败后，隔多久再试
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * 深圳快车道针对的城市。大陆城市必须先提交定位，所以深圳不能像香港那样「一次请求出全地区结果」，
- * 但只查这一个城市（3 家门店）的代价很小 —— 于是给它一条和香港同级的独立快车道。
- */
-const SZ_CITY = '深圳';
+// ---------- HTTP 长连接 ----------
+// Node 内置 fetch 的连接空闲 4 秒就关闭，而 Apple 不回 Keep-Alive 提示；
+// 深圳通道每 5 秒查一次，结果几乎每一轮都要重新 DNS + TCP + TLS 握手（实测每轮多 300~800ms）。
+// 这里用 undici 自带的 fetch + 独立 Agent，把空闲连接保留 30 秒。
+// 没装 undici（旧部署没重新 npm install）时退回内置 fetch：功能不受影响，只是慢一点。
+const KEEP_ALIVE_MS = 30_000;
+const NATIVE_FETCH = globalThis.fetch;
+let keepAlive = null;
+try {
+  const undici = await import('undici');
+  keepAlive = {
+    fetch: undici.fetch,
+    dispatcher: new undici.Agent({ keepAliveTimeout: KEEP_ALIVE_MS, keepAliveMaxTimeout: 10 * 60_000 }),
+  };
+} catch {
+  keepAlive = null;
+}
+
+/** 查询能否复用连接（undici 是否可用）。 */
+export const httpKeepAliveEnabled = () => Boolean(keepAlive);
+
+/** 默认走长连接；测试 / 调试替换了 globalThis.fetch 时，尊重替换后的实现。 */
+function httpFetch(url, init) {
+  if (keepAlive && globalThis.fetch === NATIVE_FETCH) {
+    return keepAlive.fetch(url, { ...init, dispatcher: keepAlive.dispatcher });
+  }
+  return globalThis.fetch(url, init);
+}
 
 /**
  * 限并发执行。任一项失败后不再派发新任务，但会等已发出的请求全部结束再抛出第一个错误，
@@ -97,9 +121,13 @@ class RegionSession {
     this.base = `${this.R.origin}${this.R.prefix}`;
   }
 
-  async request(url, { accept = 'application/json, text/javascript, */*; q=0.01', referer } = {}) {
+  async request(url, {
+    accept = 'application/json, text/javascript, */*; q=0.01',
+    referer,
+    timeoutMs = this.cfg.requestTimeoutMs,
+  } = {}) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.cfg.requestTimeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const headers = {
         'User-Agent': this.cfg.userAgent,
@@ -111,7 +139,19 @@ class RegionSession {
       if (cookie) headers.Cookie = cookie;
       if (accept.includes('json')) headers['X-Requested-With'] = 'XMLHttpRequest';
       if (referer) headers.Referer = referer;
-      const res = await fetch(url, { headers, redirect: 'follow', signal: controller.signal });
+      let res, text;
+      try {
+        res = await httpFetch(url, { headers, redirect: 'follow', signal: controller.signal });
+        // 响应体总是读完（包括 429），连接才能放回连接池复用
+        text = await res.text();
+      } catch (e) {
+        // 超时 / 连接被重置 / DNS 失败：跟会话本身无关，标记 transient，让上层保留会话、快速重试
+        const err = new Error(controller.signal.aborted
+          ? `${this.R.label}：请求超时（${timeoutMs}ms 无响应）`
+          : `${this.R.label}：网络错误：${e.cause?.code || e.cause?.message || e.message}`);
+        err.transient = true;
+        throw err;
+      }
       this.jar.absorb(res);
       // 429 / 503：Apple 在限制请求频率。直接报限流，不在本轮里继续重试加重限制。
       if (res.status === 429 || res.status === 503) {
@@ -119,7 +159,7 @@ class RegionSession {
         err.throttled = true;
         throw err;
       }
-      return { status: res.status, text: await res.text() };
+      return { status: res.status, text };
     } finally {
       clearTimeout(timer);
     }
@@ -181,7 +221,11 @@ class RegionSession {
   async queryParts(partNumbers, store) {
     const qs = partNumbers.map((p, i) => `parts.${i}=${encodeURIComponent(p)}`).join('&');
     const url = `${this.base}/shop/sba/availability-message?${qs}&store=${store}`;
-    const { status, text } = await this.request(url, { referer: `${this.base}/shop/buy-iphone` });
+    // 库存接口正常 1 秒内返回；卡住的连接用短超时尽早放弃（默认 8 秒，页面请求仍用 REQUEST_TIMEOUT_MS）
+    const { status, text } = await this.request(url, {
+      referer: `${this.base}/shop/buy-iphone`,
+      timeoutMs: this.cfg.queryTimeoutMs || this.cfg.requestTimeoutMs,
+    });
     if (status !== 200) throw new Error(`${this.R.label}：availability-message HTTP ${status}`);
     let json;
     try { json = JSON.parse(text); } catch {
@@ -234,6 +278,7 @@ export class ApplePickupClient {
     this.cfg = { ...cfg, products: scopeProductsByStores(cfg.products, cfg.watchStores) };
     this.log = log;
     this.sessions = new Map();
+    this.spares = new Map();         // 会话键 → 后台预建中的新会话 { session, retryAt }
     this.regionLocks = new Map();   // 地区 → 该地区最后一个排队任务
     this.lastRegionData = new Map(); // 地区 → { at, data }，供其他地区的轮次拼完整快照
     this.throttle = new Map();       // 地区 → { hits, until }：被限流后的冷却
@@ -269,18 +314,70 @@ export class ApplePickupClient {
     return task;
   }
 
-  session(regionId, locationKey = '') {
+  sessionKey(regionId, locationKey = '') {
     // 城市键本身带地区前缀（如 CN:上海），拼会话键时去掉，避免出现会话键 CN:CN:上海
     const city = locationKey.startsWith(regionId + ':') ? locationKey.slice(regionId.length + 1) : locationKey;
-    const key = city ? `${regionId}:${city}` : regionId;
-    if (!this.sessions.has(key)) {
-      const s = new RegionSession(regionId, this.cfg, this.log);
-      // 接口要求带 store 参数才会返回门店数据，用监控范围内的门店当触发器
-      s.fallbackStore =
-        this.cfg.priorityStoreFor?.[regionId] || this.cfg.defaultStoreFor?.[regionId] || '';
-      this.sessions.set(key, s);
-    }
+    return city ? `${regionId}:${city}` : regionId;
+  }
+
+  newSession(regionId) {
+    const s = new RegionSession(regionId, this.cfg, this.log);
+    // 接口要求带 store 参数才会返回门店数据，用监控范围内的门店当触发器
+    s.fallbackStore =
+      this.cfg.priorityStoreFor?.[regionId] || this.cfg.defaultStoreFor?.[regionId] || '';
+    return s;
+  }
+
+  session(regionId, locationKey = '') {
+    const key = this.sessionKey(regionId, locationKey);
+    if (!this.sessions.has(key)) this.sessions.set(key, this.newSession(regionId));
     return this.sessions.get(key);
+  }
+
+  /**
+   * 取本次查询要用的会话。
+   * 会话到了 SESSION_REFRESH_MINUTES 要换新，但在查询路径里同步重建要卡 4~5 秒
+   * （购买页 + init + 定位 + 热身）。所以过期的旧会话继续服务，新会话在后台建好、
+   * 热身通过后，下一次查询直接换上 —— 换会话不再占用查询时间。
+   * 旧会话本身出错（ready=false）时仍按原逻辑当场重建。
+   */
+  currentSession(regionId, city) {
+    const key = this.sessionKey(regionId, city?.key || '');
+    let sess = this.session(regionId, city?.key || '');
+    const spare = this.spares.get(key);
+
+    // 后台新会话已就绪：换上（若旧会话期间已当场重建过、比它还新，就丢弃备用的）
+    if (spare?.session) {
+      this.spares.delete(key);
+      if (spare.session.ready && spare.session.createdAt > sess.createdAt) {
+        this.sessions.set(key, spare.session);
+        sess = spare.session;
+        this.log(`[会话:${sess.R.short}${city ? '·' + city.city : ''}] 已切换到后台预建的新会话`);
+      }
+    } else if (spare?.retryAt && Date.now() >= spare.retryAt) {
+      this.spares.delete(key); // 上次预建失败，冷却已过，允许再试
+    }
+
+    const expired = sess.ready && Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
+    if (expired && !this.spares.has(key)) this.prepareSpare(key, regionId, city);
+    return sess;
+  }
+
+  /** 后台建一个新会话并完成定位、热身；不持有地区锁，旧会话照常查询。 */
+  prepareSpare(key, regionId, city) {
+    const entry = { session: null, retryAt: 0 };
+    this.spares.set(key, entry);
+    (async () => {
+      const s = this.newSession(regionId);
+      await s.ensureSession();
+      if (city) await s.setLocation(city);
+      if (!(await s.warmUp())) throw new Error('热身失败');
+      s.warmedKey = city ? city.key : '';
+      entry.session = s;
+    })().catch((e) => {
+      entry.retryAt = Date.now() + SPARE_RETRY_MS;
+      this.log(`[会话:${REGIONS[regionId]?.short || regionId}${city ? '·' + city.city : ''}] 后台预建新会话失败，继续用旧会话，${SPARE_RETRY_MS / 1000} 秒后再试: ${e.message}`);
+    });
   }
 
   /** 需要查询的地区：监控门店所在地区 ∩ 监控机型有料号的地区 */
@@ -444,10 +541,10 @@ export class ApplePickupClient {
     /** 查一个城市（香港为 null）：返回 { stores: Map<料号, Set<门店>>, delivery: {料号: 日期} } */
     const queryCity = async (city) => {
       // 大陆会话固定到单个城市，定位与热身结果可跨轮询复用。
-      const sess = this.session(regionId, city?.key || '');
+      // 过期会话由 currentSession 在后台换新；这里只处理出错后必须当场重建的情况
+      const sess = this.currentSession(regionId, city);
       try {
-        const stale = !sess.ready || Date.now() - sess.createdAt > this.cfg.sessionRefreshMinutes * 60_000;
-        if (stale) {
+        if (!sess.ready) {
           sess.jar.clear();
           await sess.ensureSession();
         }
@@ -496,8 +593,9 @@ export class ApplePickupClient {
         }
         return { stores, delivery };
       } catch (e) {
-        // 只作废出错的这个城市会话，其他城市的定位 / 热身继续复用。
-        sess.ready = false;
+        // 超时 / 断连这类网络错误与会话无关：保留会话，直接重试即可，不必重建（省 4~5 秒）。
+        // 其他错误（哨兵无数据、定位失败等）只作废出错的这个城市会话，其他城市继续复用。
+        if (!e.transient) sess.ready = false;
         throw e;
       }
     };
@@ -522,7 +620,9 @@ export class ApplePickupClient {
       const failed = cityPasses.length - perCity.filter(Boolean).length;
       this.log(`[重试:${R.short}] 第 ${attempt}/${this.cfg.maxRetries} 次失败（${failed}/${cityPasses.length} 个查询点）: ${lastError.message}`);
       if (attempt === this.cfg.maxRetries) throw lastError;
-      await sleep(Math.min(1500 * attempt, 10_000));
+      // 全是网络抖动（会话仍可用）时快速重试；否则按原节奏退避，给 Apple 侧恢复时间
+      const allTransient = errors.every((e) => e.transient);
+      await sleep(allTransient ? Math.min(300 * attempt, 2_000) : Math.min(1500 * attempt, 10_000));
     }
     if (perCity.some((c) => !c)) throw lastError || new Error(`${R.label}：多次重试后仍未取得可信库存数据`);
 
@@ -561,13 +661,16 @@ export class ApplePickupClient {
     return { region: regionId, city: cityKey, stores, coversRegion: stores.length === watched.length };
   }
 
-  /** 深圳通道的查询范围：优先门店所在城市（不在深圳时取第一个深圳门店） */
+  /**
+   * 城市快车道（同城高速通道）的查询范围，全国任意大陆城市通用：
+   * 优先门店在大陆就取它所在城市，否则取第一个大陆监控门店的城市。
+   * 大陆城市必须先提交定位，不能像香港那样一次请求出全地区结果，
+   * 但只查一个城市的代价很小 —— 所以给它一条和香港同级的独立快车道。
+   */
   szScope() {
-    const szStores = (this.cfg.watchStores || []).filter((id) => STORE_BY_ID[id]?.city === SZ_CITY);
-    if (!szStores.length) return null;
-    const priorityStore = STORE_BY_ID[this.cfg.priorityStore];
-    const city = priorityStore?.city === SZ_CITY ? priorityStore.city : SZ_CITY;
-    return this.cityScope('CN', CITY_KEY('CN', city));
+    const { cityKey } = fastLaneInfo(this.cfg.watchStores || [], this.cfg.priorityStore);
+    if (!cityKey) return null;
+    return this.cityScope(cityKey.split(':')[0], cityKey);
   }
 
   /** 优先通道的查询范围：优先门店所在地区 / 城市 + 优先机型 */
@@ -603,15 +706,16 @@ export class ApplePickupClient {
   }
 
   /**
-   * 深圳通道：只查深圳这一个城市的门店（大陆城市必须提交定位，所以不是「香港那样一次请求」，
-   * 但请求量只有深圳 3 家门店，可以查得和大区间隔无关地更勤）。
+   * 城市快车道：只查一个大陆城市的监控门店（大陆城市必须提交定位，所以不是「香港那样一次请求」，
+   * 但请求量只有这一个城市的门店，可以查得和大区间隔无关地更勤）。
    */
   async checkCityLane() {
     const scope = this.szScope();
-    if (!scope) throw new Error('没有可用的深圳通道（监控门店里没有深圳门店）');
+    if (!scope) throw new Error('没有可用的同城通道（监控门店里没有大陆门店）');
+    const cityName = CITY_BY_KEY[scope.city]?.city || '同城';
     const keys = this.cfg.products.filter((p) => p.parts?.[scope.region]).map((p) => p.key);
-    if (!keys.length) throw new Error('没有可用的深圳通道（没有大陆版料号的监控机型）');
-    return this.runCityLane('深圳通道', scope, keys, 'SZ');
+    if (!keys.length) throw new Error(`没有可用的${cityName}通道（没有大陆版料号的监控机型）`);
+    return this.runCityLane(`${cityName}通道`, scope, keys, 'SZ');
   }
 
   /**

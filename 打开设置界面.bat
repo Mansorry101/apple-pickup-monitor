@@ -14,7 +14,7 @@ if errorlevel 1 (
   echo.
   echo 设置界面未在运行，正在后台启动...
   echo.
-  if not exist "node_modules" (
+  if not exist "node_modules\undici" (
     echo [1/2] 首次使用，正在安装依赖...
     call npm install --no-audit --no-fund < nul
     echo.

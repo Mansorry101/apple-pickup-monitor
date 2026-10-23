@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ApplePickupClient } from '../src/apple.js';
+import { ApplePickupClient, httpKeepAliveEnabled } from '../src/apple.js';
 import { REGIONS } from '../src/stores.js';
 import { decideAlerts, acknowledgeAlerts } from '../src/alerts.js';
 import { deliverAlerts } from '../src/notifications.js';
@@ -605,6 +605,26 @@ test('通道选择：优先通道和深圳通道查同一城市时自动去重�
   assert.equal(faster.coveredBySz,false);
 });
 
+test('通道选择：深圳专属模式只派发深圳通道（大陆整轮 / 香港 / 优先都不跑）',()=>{
+  const r=sched.selectLanes({ active:['CN','HK'], intervals:normalInts, szScope, priorityScope:szPriScope, szOnly:true });
+  assert.deepEqual(r.lanes.map((l) => l.id),['SZ'],'专属模式下只有深圳通道');
+  assert.equal(r.lanes[0].interval,5_000,'间隔跟香港同速');
+  assert.deepEqual(r.lanes[0].cities,{CN:['CN:深圳']});
+  assert.equal(r.coveredBySz,false,'专属模式不需要再解释优先通道被谁覆盖');
+
+  // 即使深圳间隔比大陆整轮更长，专属模式下也必须保留它，否则就没有通道可跑
+  const slow=sched.selectLanes({ active:['CN'], intervals:{...normalInts,SZ:90_000}, szScope, szOnly:true });
+  assert.deepEqual(slow.lanes.map((l) => l.id),['SZ']);
+  assert.equal(slow.lanes[0].interval,90_000);
+
+  // 没有深圳门店 → 没有通道，交给调用方报错，绝不回退到大陆整轮
+  assert.deepEqual(
+    sched.selectLanes({ active:['CN','HK'], intervals:normalInts, szScope:null, szOnly:true }).lanes,
+    [],
+    '不能悄悄退回大陆整轮',
+  );
+});
+
 test('通道选择：只有到期的通道会被派发（深圳每一轮不该顺带跑一遍大陆整轮）',()=>{
   const { lanes } = sched.selectLanes({ active:['CN'], intervals:normalInts, szScope });
   assert.deepEqual(lanes.map((l) => [l.id, l.interval]),[['CN',60_000],['SZ',5_000]]);
@@ -655,6 +675,29 @@ test('深圳通道的范围只含深圳门店，且能确认全部监控门店�
 
   // 没有深圳门店 → 不开这条通道
   assert.equal(new ApplePickupClient({...szCfg,watchStores:['R320']},()=>{}).szScope(),null);
+});
+
+test('同城高速通道适用于全国任意城市：北京 3 家门店 → 只开北京一条通道',()=>{
+  const BJ=['R320','R448','R388'];
+  const bj=new ApplePickupClient({...cfg,watchStores:BJ,priorityStore:'R320',priorityStoreFor:{CN:'R320'}},()=>{});
+  const scope=bj.szScope();
+  assert.equal(scope.region,'CN');assert.equal(scope.city,'CN:北京');
+  assert.deepEqual([...scope.stores].sort(),[...BJ].sort());
+  assert.equal(scope.coversRegion,true,'北京 3 家全在范围内');
+  const r=sched.selectLanes({ active:['CN','HK'], intervals:normalInts, szScope:scope, cityOnly:true });
+  assert.deepEqual(r.lanes.map((l) => l.id),['SZ'],'同城高速模式只跑城市通道');
+  assert.deepEqual(r.lanes[0].cities,{CN:['CN:北京']});
+  assert.equal(r.lanes[0].interval,5_000,'与香港同速');
+
+  // 上海 + 北京（跨城市）：优先门店所在的上海走快车道，北京交给大陆整轮
+  const mix=new ApplePickupClient({...cfg,watchStores:['R401','R320'],priorityStore:'R401',priorityStoreFor:{CN:'R401'}},()=>{});
+  const ms=mix.szScope();
+  assert.equal(ms.city,'CN:上海');assert.equal(ms.coversRegion,false);
+  const lanes=sched.selectLanes({ active:['CN'], intervals:normalInts, szScope:ms }).lanes.map((l) => l.id);
+  assert.deepEqual(lanes,['CN','SZ'],'跨城市时恢复大陆整轮 + 城市快车道');
+
+  // 只盯香港：没有大陆城市，不开城市快车道
+  assert.equal(new ApplePickupClient({...cfg,watchStores:['R499'],priorityStore:'R499'},()=>{}).szScope(),null);
 });
 
 test('深圳通道只提交深圳一处定位、只请求深圳门店，别的城市门店被丢弃',async()=>{
@@ -738,4 +781,87 @@ test('深圳通道没覆盖全部门店时，本地缓存不能被当作「该�
   assert.deepEqual([...ok.stores].sort(),['R320','R499'].sort());
   assert.equal(ok.complete,true);
   assert.equal(setups.length,2);
+});
+
+// ---------- 提速：长连接 / 后台换会话 / 短超时 ----------
+const tick=()=>new Promise(r=>setTimeout(r,0));
+
+test('已安装 undici 时查询走长连接',()=>{
+  assert.equal(httpKeepAliveEnabled(),true);
+});
+
+test('网络超时 / 断连：保留会话快速重试，不重建会话',async()=>{
+  const {client,s}=mockSession();client.cfg.maxRetries=3;
+  let calls=0,rebuilt=0;
+  s.ensureSession=async()=>{rebuilt++;};
+  s.queryParts=async(parts)=>{calls++;
+    if(calls===1){const e=new Error('HK：请求超时');e.transient=true;throw e;}
+    return parts.map(p=>item(p,1));};
+  const t0=Date.now();const [r]=await client.checkAvailability();
+  assert.equal(r.atPriority,true);assert.equal(calls,2);
+  assert.equal(rebuilt,0,'网络错误不作废会话');assert.equal(s.ready,true);
+  assert.ok(Date.now()-t0<1000,'快速重试，而不是 1.5 秒起步的退避');
+});
+
+test('非网络错误（哨兵无数据）仍然作废会话并当场重建',async()=>{
+  const {client,s}=mockSession();client.cfg.maxRetries=2;
+  let calls=0,rebuilt=0;
+  s.ensureSession=async()=>{rebuilt++;s.ready=true;s.createdAt=Date.now();};
+  s.warmUp=async()=>true;
+  s.queryParts=async(parts)=>{calls++;
+    if(calls===1)return [];
+    return parts.map(p=>item(p,1));};
+  const [r]=await client.checkAvailability();
+  assert.equal(r.atPriority,true);assert.equal(rebuilt,1);
+});
+
+test('库存请求用短超时；卡住的连接 / 网络错误报 transient',async()=>{
+  const {client,s}=mockSession();
+  client.cfg.queryTimeoutMs=50;client.cfg.requestTimeoutMs=25_000;
+  const orig=globalThis.fetch;
+  try{
+    globalThis.fetch=(url,init)=>new Promise((_,rej)=>init.signal.addEventListener('abort',()=>rej(new DOMException('aborted','AbortError'))));
+    const t0=Date.now();
+    await assert.rejects(s.queryParts(['X'],'R499'),(e)=>e.transient===true&&/超时/.test(e.message));
+    assert.ok(Date.now()-t0<2000,'不会等满 25 秒');
+    globalThis.fetch=async()=>{const e=new TypeError('fetch failed');e.cause={code:'ECONNRESET'};throw e;};
+    await assert.rejects(s.queryParts(['X'],'R499'),(e)=>e.transient===true&&/ECONNRESET/.test(e.message));
+  }finally{globalThis.fetch=orig;}
+});
+
+test('会话过期：旧会话继续查询，新会话后台建好后下一轮换上，查询路径不重建',async()=>{
+  const {client,s}=mockSession();
+  const used=[];let inline=0,built=0;const gate=deferred();
+  s.createdAt=Date.now()-31*60_000;
+  s.ensureSession=async()=>{inline++;};
+  s.queryParts=async(parts)=>{used.push('old');return parts.map(p=>item(p,1));};
+  const origNew=client.newSession.bind(client);
+  client.newSession=(r)=>{built++;const n=origNew(r);
+    n.ensureSession=async()=>{await gate.promise;n.ready=true;n.createdAt=Date.now();};
+    n.warmUp=async()=>true;
+    n.queryParts=async(parts)=>{used.push('new');return parts.map(p=>item(p,1));};
+    return n;};
+  const [a]=await client.checkAvailability();
+  const [b]=await client.checkAvailability();
+  assert.ok(a.atPriority&&b.atPriority,'新会话建好之前，旧会话照常出结果');
+  assert.equal(built,1,'只预建一个备用会话');
+  gate.resolve();await tick();await tick();
+  const [c]=await client.checkAvailability();
+  assert.ok(c.atPriority);
+  assert.deepEqual(used,['old','old','new']);
+  assert.equal(inline,0,'查询路径里没有同步重建');
+});
+
+test('后台预建失败：记日志，旧会话继续用，冷却期内不反复重建',async()=>{
+  const logs=[];
+  const client=new ApplePickupClient({...cfg,watchRegions:['HK'],watchStores:['R499']},(m)=>logs.push(m));
+  const s=client.session('HK');s.ready=true;s.createdAt=Date.now()-31*60_000;s.warmedKey='';
+  s.queryParts=async(parts)=>parts.map(p=>item(p,1));
+  let built=0;const origNew=client.newSession.bind(client);
+  client.newSession=(r)=>{built++;const n=origNew(r);n.ensureSession=async()=>{throw new Error('init 503');};return n;};
+  const [r1]=await client.checkAvailability();await tick();
+  const [r2]=await client.checkAvailability();await tick();
+  assert.ok(r1.atPriority&&r2.atPriority);
+  assert.equal(built,1,'冷却期内不再预建');
+  assert.ok(logs.some(m=>/后台预建新会话失败/.test(m)));
 });

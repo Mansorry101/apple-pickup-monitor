@@ -5,6 +5,7 @@ import { loadSettings, saveSettings, enrichTargets, CATALOG_CACHE } from './sett
 import { fetchCatalog, loadCatalogCache, saveCatalogCache } from './catalog.js';
 import { PAGE } from './webui-page.js';
 import { VERSION } from './constants.js';
+import { pushEnabled, maskKey } from './push.js';
 
 const json = (res, code, obj) => {
   res.writeHead(code, {
@@ -65,8 +66,16 @@ function directoryPayload() {
   };
 }
 
+/** 界面上显示的推送配置：key 只露前 4 位 */
+const pushInfo = (cfg) => ({
+  configured: pushEnabled(cfg),
+  devices: (cfg.push?.keys || []).map(maskKey),
+  critical: Boolean(cfg.push?.critical),
+  open: cfg.push?.open === 'bag' ? 'bag' : 'product',
+});
+
 /**
- * @param {object} ctx  { getCfg, reload, runCheckNow, sendTestMail, status }
+ * @param {object} ctx  { getCfg, reload, runCheckNow, sendTestMail, sendTestPush, status }
  */
 export function startWebUi(ctx, log = console.log) {
   let lastRequestAt = Date.now();
@@ -96,6 +105,7 @@ export function startWebUi(ctx, log = console.log) {
             from: cfg.mail.user,
             to: cfg.mail.to,
           },
+          push: pushInfo(cfg),
           status: ctx.status(),
           runsMonitor: ctx.runsMonitor !== false,
           version: ctx.version || VERSION,
@@ -112,6 +122,7 @@ export function startWebUi(ctx, log = console.log) {
             from: cfg.mail.user,
             to: cfg.mail.to,
           },
+          push: pushInfo(cfg),
           now: Date.now(),
         });
       }
@@ -148,6 +159,16 @@ export function startWebUi(ctx, log = console.log) {
         try {
           await ctx.sendTestMail();
           return json(res, 200, { ok: true });
+        } catch (e) {
+          return json(res, 200, { ok: false, error: e.message });
+        }
+      }
+
+      if (route === 'POST /api/test-push') {
+        try {
+          if (!ctx.sendTestPush) throw new Error('当前运行的程序不支持推送测试，请重启监控');
+          const r = await ctx.sendTestPush();
+          return json(res, 200, { ok: true, sent: r?.sent ?? 0, failed: r?.failed || [] });
         } catch (e) {
           return json(res, 200, { ok: false, error: e.message });
         }

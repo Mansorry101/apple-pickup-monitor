@@ -1,24 +1,26 @@
 {
   "name": "apple-pickup-monitor",
-  "version": "2.3.0",
+  "version": "2.7.0",
   "private": true,
   "type": "module",
-  "description": "监控中国大陆 / 香港 Apple Store 门市取货库存（任意机型 / 容量 / 颜色 / 门店），有货时邮件通知；深圳可单独走高频快车道",
+  "description": "监控 Apple Store 门市取货库存（全国城市可选，门店同城时自动启用同城高速模式，与香港同速），有货时邮件 + 手机推送通知",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "once": "node src/index.js --once",
     "test-email": "node src/index.js --test-email",
-    "test": "node test/settings.mjs && node test/positive-path.mjs && node --test test/reliability.mjs",
+    "test": "node test/settings.mjs && node test/positive-path.mjs && node --test test/reliability.mjs test/push.mjs",
     "test:ui": "node test/ui.mjs",
     "test:live": "node test/live.mjs",
     "build-catalog": "node tools/build-catalog.mjs",
-    "test:air-live": "node test/air-regions-live.mjs"
+    "test:air-live": "node test/air-regions-live.mjs",
+    "test-push": "node src/index.js --test-push"
   },
   "engines": {
     "node": ">=18.17"
   },
   "dependencies": {
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "undici": "6.29.1"
   }
 }

@@ -1,8 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './constants.js';
-import { STORE_BY_ID, SEARCHABLE_REGIONS, REGIONS } from './stores.js';
+import { STORES, STORE_BY_ID, SEARCHABLE_REGIONS, REGIONS, fastLaneInfo } from './stores.js';
 import { findVariant, findVariantByKey } from './catalog.js';
+
+/**
+ * 默认监控的门店（深圳 3 家，同城 → 默认就是同城高速模式）。
+ * 全国任意城市都可以在界面里选；这里只是首次运行时的默认值。
+ */
+const SZ_PREFERRED_ORDER = ['R484', 'R761', 'R793'];
+export const SHENZHEN_STORES = [
+  ...SZ_PREFERRED_ORDER.filter((id) => STORE_BY_ID[id]?.city === '深圳'),
+  ...STORES.filter((s) => s.city === '深圳' && !SZ_PREFERRED_ORDER.includes(s.id)).map((s) => s.id),
+];
 
 export const SETTINGS_FILE = process.env.SETTINGS_FILE || path.join(ROOT, 'config.json');
 export const CATALOG_CACHE = path.join(ROOT, 'catalog-cache.json');
@@ -20,17 +30,18 @@ export const PART_RE = /^[A-Z0-9]{4,12}\/[A-Z]{1,2}$/;
 
 export const DEFAULT_SETTINGS = {
   version: 2,
+  // 全国城市都可查询。优先门店 + 监控门店全部在同一个大陆城市时，自动启用「同城高速模式」：
+  // 只跑该城市一条通道，速度与香港同级（常规 5 秒 / 放货 3 秒）；跨城市时恢复大陆整轮 + 城市快车道。
   // 默认盯深圳：优先门店 = 深圳益田假日广场（R484）
-  // 其他深圳门店（R761 万象城 / R793 前海壹方城）在界面里点「添加门店」即可一起监控。
   priorityStore: 'R484',
-  watchStores: ['R484'],
+  // 默认深圳 3 家门店（益田假日广场 / 万象城 / 前海壹方城），可在界面里换成任意城市
+  watchStores: SHENZHEN_STORES,
   priorityOnly: false,
   soldOutNotify: true,
   repeatAlertMinutes: 15,
   pollIntervalSeconds: 60,
   hkIntervalSeconds: 5,
-  // 深圳自己的快速通道：大陆城市必须提交定位，所以不像香港那样只发一次请求，
-  // 但只查深圳这一个城市（3 家门店）的代价很小，可以查得比大陆整轮勤得多。
+  // 同城高速通道（城市快车道）：同城高速模式下它就是唯一通道，与香港同速（5 秒 / 放货 3 秒）。
   szIntervalSeconds: 5,
   // 优先门店 + 优先机型的快速通道：只查优先门店所在城市，比整轮扫描更勤
   priorityBoost: true,
@@ -92,10 +103,12 @@ export function normalizeSettings(input, base) {
   const s = { ...resolvedBase, ...(input || {}) };
   const inp = input || {};
 
-  const priorityStore =
+  // 全国城市都可查询（旧版的 shenzhenOnly 锁定已移除，config.json 里残留该字段也会被忽略）。
+  const requestedStore =
     STORE_BY_ID[s.priorityStore] && REGIONS[STORE_BY_ID[s.priorityStore].region].onlineStore
       ? s.priorityStore
-      : resolvedBase.priorityStore || DEFAULT_SETTINGS.priorityStore;
+      : null;
+  const priorityStore = requestedStore || resolvedBase.priorityStore || DEFAULT_SETTINGS.priorityStore;
 
   const priorityOnly = inp.priorityOnly !== undefined
     ? Boolean(inp.priorityOnly)
@@ -109,25 +122,35 @@ export function normalizeSettings(input, base) {
   const rawWatch = Array.isArray(inp.watchStores) ? inp.watchStores
     : hasBase && Array.isArray(resolvedBase.watchStores) ? resolvedBase.watchStores
       : [];
+  const watchStores = cleanStores(rawWatch, priorityStore);
+  // 同城高速模式：优先门店 + 监控门店全部在同一个大陆城市时自动开启（任意城市，不限深圳）
+  const { sameCityFast } = fastLaneInfo(watchStores, priorityStore);
+
+  const hkIntervalSeconds = clampInt(s.hkIntervalSeconds, 5, 3, 24 * 3600);
+  const rushHkIntervalSeconds = clampInt(s.rushHkIntervalSeconds, 3, 3, 24 * 3600);
+
   const out = {
     version: 2,
+    // 只读的派生字段（每次读取都会重新计算），给界面 / 日志说明当前模式
+    sameCityFast,
     priorityStore,
-    watchStores: cleanStores(rawWatch, priorityStore),
+    watchStores,
     priorityOnly,
     soldOutNotify: s.soldOutNotify !== false,
     repeatAlertMinutes: clampInt(s.repeatAlertMinutes, 15, 0, 24 * 60),
     pollIntervalSeconds: clampInt(s.pollIntervalSeconds, 60, 15, 24 * 3600),
-    hkIntervalSeconds: clampInt(s.hkIntervalSeconds, 5, 3, 24 * 3600),
-    // 深圳通道：和香港一样可以在 3 秒级查询（只查深圳一个城市，代价小）
+    hkIntervalSeconds,
+    // 同城高速通道（城市快车道）：与香港同级，默认 5 秒 / 放货 3 秒，下限 3 秒。
     szIntervalSeconds: clampInt(s.szIntervalSeconds, 5, 3, 24 * 3600),
     // 优先高频通道只对同一城市的监控列表开放，跨城市时自动关闭。
-    priorityBoost: s.priorityBoost !== false && sameCityStores(cleanStores(rawWatch, priorityStore), priorityStore),
+    // 同城高速模式下城市通道已经覆盖同一批门店且更快，优先通道没有意义，直接关闭。
+    priorityBoost: !sameCityFast && s.priorityBoost !== false && sameCityStores(watchStores, priorityStore),
     priorityIntervalSeconds: clampInt(s.priorityIntervalSeconds, 20, 5, 24 * 3600),
     rushEnabled: s.rushEnabled !== false,
     rushStart: hhmm(s.rushStart, '06:00'),
     rushEnd: hhmm(s.rushEnd, '09:00'),
     rushPollIntervalSeconds: clampInt(s.rushPollIntervalSeconds, 15, 15, 24 * 3600),
-    rushHkIntervalSeconds: clampInt(s.rushHkIntervalSeconds, 3, 3, 24 * 3600),
+    rushHkIntervalSeconds,
     rushSzIntervalSeconds: clampInt(s.rushSzIntervalSeconds, 3, 3, 24 * 3600),
     rushPriorityIntervalSeconds: clampInt(s.rushPriorityIntervalSeconds, 8, 5, 24 * 3600),
     uiPort: clampInt(s.uiPort, 8787, 1024, 65535),

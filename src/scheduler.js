@@ -97,16 +97,32 @@ export function msUntilNextDue(dueAtByRegion, regionIds, now = Date.now()) {
  * 纯函数（无副作用、不碰时间），方便离线测试这条规则：
  *   1. 城市级通道（深圳 / 优先）间隔必须比它所在地区的整轮更短，否则那只是重复请求；
  *   2. 优先通道和深圳通道查同一个城市、而且不会更勤时，优先通道被顶掉
- *      （返回的 coveredBySz 让界面能说明原因，而不是让用户以为通道丢了）。
+ *      （返回的 coveredBySz 让界面能说明原因，而不是让用户以为通道丢了）；
+ *   3. szOnly（深圳专属模式）下大陆整轮、香港整轮、优先通道全部不派发，
+ *      只留深圳一条通道 —— 否则「屏蔽大陆/香港」就只是嘴上说说。
  *
  * @param {object} o
  * @param {string[]} o.active                  可查询的地区（如 ['CN','HK']）
  * @param {{CN:number,HK:number,SZ:number,PRI:number}} o.intervals pollPlan().intervals
- * @param {object|null} o.szScope               深圳通道范围（见 ApplePickupClient#szScope）
+ * @param {object|null} o.szScope               城市快车道范围（见 ApplePickupClient#szScope，任意大陆城市）
  * @param {object|null} o.priorityScope         优先通道范围（见 #priorityScope）
+ * @param {boolean} o.cityOnly                  同城高速模式：只跑这一条城市通道（旧名 szOnly 仍兼容）
  * @returns {{ lanes: object[], coveredBySz: boolean, priorityScope: object|null }}
  */
-export function selectLanes({ active = [], intervals = {}, szScope = null, priorityScope = null } = {}) {
+export function selectLanes({ active = [], intervals = {}, szScope = null, priorityScope = null, cityOnly = false, szOnly = false } = {}) {
+  // 同城高速模式：唯一通道就是该城市的快车道，速度与香港同级（默认 5 秒 / 放货 3 秒）。
+  if (cityOnly || szOnly) {
+    const lane = szScope && active.includes(szScope.region)
+      ? {
+        id: 'SZ', region: szScope.region,
+        interval: intervals.SZ ?? intervals.CN ?? 5000,
+        city: szScope.city, covers: Boolean(szScope.coversRegion),
+        cities: { [szScope.region]: [szScope.city] },
+      }
+      : null;
+    return { lanes: lane ? [lane] : [], coveredBySz: false, priorityScope: null };
+  }
+
   const lanes = active.map((r) => ({ id: r, region: r, interval: intervals[r] ?? intervals.CN }));
   const addCityLane = (id, scope, interval) => {
     if (!scope || !active.includes(scope.region)) return null;

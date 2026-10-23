@@ -152,34 +152,50 @@ for (const id of EXPECTED) {
 }
 console.log('  ✓ 7 个下拉框全部有内容（不会出现「点开是空的」）');
 
-assert.ok(snapshot['w-city'].n > 1, '#w-city（同时监控的城市）应当列出多个城市');
-assert.ok(snapshot['w-store'].n > 0, '#w-store（同时监控的门店）应当列出该城市的门店');
-console.log('  ✓ 「同时监控的门店」的城市 / 门店下拉框已正确填充');
+const cityKeys = JSON.parse(await evaluate(`JSON.stringify(Array.prototype.map.call(document.getElementById('w-city').options, function(o){return o.value;}))`));
+const mode = JSON.parse(await evaluate(
+  `fetch('/api/bootstrap').then(function(r){return r.json()}).then(function(b){
+     return JSON.stringify({ fast: Boolean(b.settings.sameCityFast), watchStores: b.settings.watchStores });
+   })`));
 
-assert.ok(snapshot['w-city'].groups >= 2, '#w-city 应当按 中国大陆 / 香港 / 澳门 分组');
-console.log('  ✓ 城市下拉按地区分组');
+// 全国城市都可选：不管当前是否同城高速，城市下拉都要列出全国城市，「添加门店」入口始终可见
+{
+  assert.ok(cityKeys.length > 10, `城市下拉应列出全国城市，实际 ${cityKeys.length} 个`);
+  assert.ok(snapshot['p-city'].n > 10, '优先门店的城市下拉也应列出全国城市');
+  const pickerDisplay = await evaluate(`getComputedStyle(document.getElementById('w-picker')).display`);
+  assert.notEqual(pickerDisplay, 'none', '「添加门店」入口应当可见');
+  const note = await evaluate(`(document.getElementById('mode-note') || {}).textContent || ''`);
+  assert.ok(note.indexOf(mode.fast ? '同城高速模式' : '全国查询模式') >= 0, '页面应当说明当前模式：' + note);
+  console.log(`  ✓ 全国 ${cityKeys.length} 个城市可选；当前${mode.fast ? '同城高速模式' : '全国查询模式'}`);
+}
+{
+  assert.ok(snapshot['w-city'].n > 1, '#w-city（同时监控的城市）应当列出多个城市');
+  assert.ok(snapshot['w-store'].n > 0, '#w-store（同时监控的门店）应当列出该城市的门店');
+  console.log('  ✓ 「同时监控的门店」的城市 / 门店下拉框已正确填充');
+
+  assert.ok(snapshot['w-city'].groups >= 2, '#w-city 应当按 中国大陆 / 香港 / 澳门 分组');
+  console.log('  ✓ 城市下拉按地区分组');
+
+  const beijing = cityKeys.find((k) => k === 'CN:北京');
+  assert.ok(beijing, '城市列表里应当有 北京');
+  await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(beijing)};s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(300);
+  const after = JSON.parse(await evaluate(PROBE));
+  assert.ok(after['w-store'].n >= 6, `切到北京后门店下拉应有 6 家，实际 ${after['w-store'].n}`);
+  console.log(`  ✓ 级联生效：切到「北京」→ 门店下拉变成 ${after['w-store'].n} 家，首项 "${after['w-store'].first}"`);
+
+  const macau = cityKeys.find((k) => k === 'MO:澳門');
+  assert.ok(macau, '城市列表里应当有 澳門');
+  await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(macau)};s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(300);
+  const mo = JSON.parse(await evaluate(PROBE));
+  assert.equal(mo['w-store'].disabled, true, '澳门没有网上商店，门店下拉应当被禁用');
+  console.log('  ✓ 选到澳门时门店下拉被正确禁用');
+}
 
 assert.ok(snapshot['m-family'].n >= 5, '机型下拉应当有多个机型可选');
 assert.ok(snapshot['m-color'].n > 0, '颜色下拉应当有选项');
 console.log('  ✓ 机型 / 容量 / 颜色 三级下拉已填充');
-
-const cityKeys = await evaluate(`JSON.stringify(Array.prototype.map.call(document.getElementById('w-city').options, function(o){return o.value;}))`);
-const keys = JSON.parse(cityKeys);
-const beijing = keys.find((k) => k === 'CN:北京');
-assert.ok(beijing, '城市列表里应当有 北京');
-await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(beijing)};s.dispatchEvent(new Event('change'));return 1;})()`);
-await sleep(300);
-const after = JSON.parse(await evaluate(PROBE));
-assert.ok(after['w-store'].n >= 6, `切到北京后门店下拉应有 6 家，实际 ${after['w-store'].n}`);
-console.log(`  ✓ 级联生效：切到「北京」→ 门店下拉变成 ${after['w-store'].n} 家，首项 "${after['w-store'].first}"`);
-
-const macau = keys.find((k) => k === 'MO:澳門');
-assert.ok(macau, '城市列表里应当有 澳門');
-await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(macau)};s.dispatchEvent(new Event('change'));return 1;})()`);
-await sleep(300);
-const mo = JSON.parse(await evaluate(PROBE));
-assert.equal(mo['w-store'].disabled, true, '澳门没有网上商店，门店下拉应当被禁用');
-console.log('  ✓ 选到澳门时门店下拉被正确禁用');
 
 // 香港 / 深圳各自可以有更短的间隔（默认 5 秒），输入框必须被填上值
 const intervals = JSON.parse(await evaluate(`JSON.stringify((function(){
@@ -198,6 +214,27 @@ assert.ok(intervals.rsz, '深圳通道放货时段间隔输入框应当有值');
 assert.ok(Number(intervals.sz) >= 3 && Number(intervals.sz) <= 60,
   `深圳通道间隔应当是 3–60 秒的合理值，实际 ${intervals.sz}`);
 assert.ok(Number(intervals.rsz) >= 3 && Number(intervals.rsz) <= 60, '深圳放货时段间隔下限应为 3 秒');
+
+const disabledNow = () => evaluate(
+  `JSON.stringify(['interval','hk-interval','rush-interval','rush-hk-interval','pri-interval'].map(function(id){
+     var e = document.getElementById(id); return e ? e.disabled : null;
+   }))`).then(JSON.parse);
+if (mode.fast) {
+  const disabled = await disabledNow();
+  assert.ok(disabled.every(Boolean), '同城高速模式下大陆 / 香港 / 优先通道的间隔输入框应置灰：' + JSON.stringify(disabled));
+  assert.equal(Number(intervals.sz), Number(intervals.hk), '同城高速通道默认与香港同速');
+  assert.equal(Number(intervals.rsz), 3, '放货时段同城高速通道应为 3 秒');
+  console.log('  ✓ 同城高速模式：大陆 / 香港 / 优先间隔输入框已置灰，城市通道与香港同速');
+
+  // 加一家北京门店 → 跨城市，界面应立即切换成全国查询模式（不保存，只看界面反应）
+  await evaluate(`(function(){var c=document.getElementById('w-city');c.value='CN:北京';c.dispatchEvent(new Event('change'));
+    document.getElementById('btn-addstore').click();return 1;})()`);
+  await sleep(300);
+  const note2 = await evaluate(`(document.getElementById('mode-note') || {}).textContent || ''`);
+  assert.ok(note2.indexOf('全国查询模式') >= 0, '加入北京门店后应切换为全国查询模式：' + note2);
+  assert.ok((await disabledNow()).every((d) => d === false), '跨城市后大陆 / 香港间隔输入框应恢复可编辑');
+  console.log('  ✓ 加入北京门店后实时切换为全国查询模式，间隔输入框恢复可编辑');
+}
 console.log(`  ✓ 轮询间隔输入框已填值：大陆 ${intervals.cn} 秒 / 香港 ${intervals.hk} 秒（min=${intervals.hkMin}）/ ` +
   `深圳 ${intervals.sz} 秒（min=${intervals.szMin}）/ 深圳放货 ${intervals.rsz} 秒`);
 

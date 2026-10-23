@@ -134,13 +134,13 @@ MAIL_TO=${v.to}
 # 轮询间隔（秒）
 POLL_INTERVAL_SECONDS=60
 
-# 第一优先门店：R499 = Apple Canton Road（广东道）
-PRIORITY_STORE=R499
+# 第一优先门店：R484 = 深圳益田假日广场（全国城市可选；门店全部同城时自动启用同城高速模式）
+PRIORITY_STORE=R484
 
 # false = 其他门店有货也发一封「备选」邮件
 CANTON_ONLY=false
 
-# 广东道持续有货时，每隔多少分钟再提醒一次
+# 优先门店持续有货时，每隔多少分钟再提醒一次
 REPEAT_ALERT_MINUTES=15
 
 # 库存消失时发一封收尾邮件
@@ -148,10 +148,17 @@ SOLD_OUT_NOTIFY=true
 
 # ---------- 高级（一般不用改） ----------
 REQUEST_TIMEOUT_MS=25000
+QUERY_TIMEOUT_MS=8000
 MAX_RETRIES=6
 SESSION_REFRESH_MINUTES=30
 `;
-  fs.writeFileSync(ENV_PATH, content, 'utf8');
+  // 重新配置邮箱时保留手机推送（BARK_*）设置，否则会被整份覆盖掉
+  const existing = readExisting();
+  const bark = Object.entries(existing).filter(([k]) => k.startsWith('BARK_'));
+  const pushBlock = bark.length
+    ? `\n# ---------- 手机推送（Bark） ----------\n${bark.map(([k, v]) => `${k}=${v}`).join('\n')}\n`
+    : '';
+  fs.writeFileSync(ENV_PATH, content + pushBlock, 'utf8');
   try { fs.chmodSync(ENV_PATH, 0o600); } catch {}
 }
 
@@ -255,9 +262,9 @@ export async function runSetup(argv = [], out = console.log) {
       try {
         await sendMail(transport, mailCfg, {
           subject: '✅ Apple 取货监控 — 配置成功',
-          text: '配置成功。程序会在 Apple Canton Road（广东道）出现 iPhone 18 Pro Max 512GB 银/黑库存时，发邮件到这里。',
-          html: `<p>配置成功 ✅</p><p>程序会在 <strong>Apple Canton Road（广东道）</strong> 出现
-                 <strong>iPhone 18 Pro Max 512GB 銀色/黑色</strong> 门市取货库存时，立刻发邮件到这里。</p>
+          text: '配置成功。程序会在你选的 Apple Store（默认深圳 3 家，可在设置界面换成全国任意城市）出现目标机型库存时，发邮件到这里。',
+          html: `<p>配置成功 ✅</p><p>程序会在 <strong>你选的 Apple Store</strong>（默认深圳 3 家，可在设置界面换成全国任意城市）出现
+                 <strong>iPhone 18 Pro Max 512GB 银色/黑色</strong> 门市取货库存时，立刻发邮件到这里。</p>
                  <p style="color:#888;font-size:12px">如果这封邮件进了垃圾箱，请把发件人加入白名单。</p>`,
         });
         out(`${C.green}已发送${C.reset} ${C.dim}(没收到先翻垃圾邮件箱)${C.reset}`);
