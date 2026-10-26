@@ -63,7 +63,7 @@ macOS / Linux 用 `npm install && npm start`，systemd 与 launchd 配置在 `Mo
 结账页右下角会出现悬浮按钮，点一下即自动填写；也可以按 <kbd>Alt</kbd>+<kbd>Q</kbd>。
 
 > Chrome 137 起不支持命令行加载扩展，必须走上面的手动步骤。
-> 也可以直接下载 [Releases](../../releases) 里的 `apple-checkout-helper-v1.10.0.zip` 解压后加载。
+> 也可以直接下载 [Releases](releases) 里的 `apple-checkout-helper-v1.10.0.zip` 解压后加载。
 
 ---
 
