@@ -1,0 +1,234 @@
+import assert from 'node:assert';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { loadConfig } from '../src/config.js';
+import { startWebUi } from '../src/webui.js';
+
+const UI_PORT = 8899;
+const CDP_PORT = 9333;
+
+const BROWSERS = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+];
+const browser = BROWSERS.find((p) => { try { return fs.existsSync(p); } catch { return false; } });
+if (!browser) {
+  console.log('⚠️  没找到 Chrome / Edge，跳过界面渲染测试');
+  process.exit(0);
+}
+assert.ok(typeof WebSocket === 'function', '需要 Node 22+（内置 WebSocket）来驱动浏览器');
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const cfg = loadConfig();
+const logs = [];
+const ui = await startWebUi(
+  {
+    getCfg: () => ({ ...cfg, uiPort: UI_PORT }),
+    reload: () => {},
+    status: () => ({ lastCheckAt: null, lastError: null, results: [] }),
+    runsMonitor: false,
+    version: 'test',
+    runCheckNow: async () => [],
+    sendTestMail: async () => {},
+  },
+  (m) => logs.push(m),
+);
+assert.ok(ui.server, `设置界面没起来：${logs.join(' | ')}`);
+
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apm-ui-'));
+const chrome = spawn(
+  browser,
+  [
+    '--headless=new',
+    '--disable-gpu',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-extensions',
+    `--user-data-dir=${userDataDir}`,
+    `--remote-debugging-port=${CDP_PORT}`,
+    `http://127.0.0.1:${UI_PORT}/`,
+  ],
+  { stdio: 'ignore', windowsHide: true },
+);
+
+let ws;
+const cleanup = () => {
+  try { ws?.close(); } catch { /* */ }
+  try { chrome.kill(); } catch { /* */ }
+  try { ui.server.close(); } catch { /* */ }
+  try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch { /* */ }
+};
+process.on('exit', cleanup);
+
+async function findTarget() {
+  for (let i = 0; i < 60; i++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${CDP_PORT}/json`);
+      const list = await res.json();
+      const page = list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
+      if (page) return page;
+    } catch { /* 还没起来 */ }
+    await sleep(500);
+  }
+  throw new Error('浏览器没有暴露调试端口');
+}
+
+const target = await findTarget();
+ws = new WebSocket(target.webSocketDebuggerUrl);
+await new Promise((res, rej) => {
+  ws.addEventListener('open', res, { once: true });
+  ws.addEventListener('error', () => rej(new Error('WebSocket 连接失败')), { once: true });
+});
+
+let msgId = 0;
+const pending = new Map();
+ws.addEventListener('message', (ev) => {
+  let m;
+  try { m = JSON.parse(ev.data); } catch { return; }
+  if (m.id && pending.has(m.id)) {
+    pending.get(m.id)(m);
+    pending.delete(m.id);
+  }
+});
+function cdp(method, params = {}) {
+  const id = ++msgId;
+  ws.send(JSON.stringify({ id, method, params }));
+  return new Promise((resolve, reject) => {
+    pending.set(id, (m) => (m.error ? reject(new Error(m.error.message)) : resolve(m.result)));
+    setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error(`${method} 超时`)); } }, 20000);
+  });
+}
+
+async function evaluate(expression) {
+  const r = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+  return r?.result?.value;
+}
+
+const PROBE = `JSON.stringify((function(){
+  var ids = ['p-city','p-store','w-city','w-store','m-family','m-cap','m-color'];
+  var out = {};
+  ids.forEach(function(id){
+    var s = document.getElementById(id);
+    out[id] = s ? { n: s.options.length, groups: s.querySelectorAll('optgroup').length,
+                    disabled: s.disabled, first: s.options[0] ? s.options[0].textContent : '' } : null;
+  });
+  out.__ready = !!(document.getElementById('s-text') && document.getElementById('s-text').textContent !== '加载中…');
+  return out;
+})())`;
+
+let snapshot = null;
+for (let i = 0; i < 40; i++) {
+  const raw = await evaluate(PROBE);
+  const s = raw ? JSON.parse(raw) : null;
+  if (s && s.__ready && s['w-city'] && s['w-city'].n > 0 && s['w-store'] && s['w-store'].n > 0) {
+    snapshot = s;
+    break;
+  }
+  snapshot = s;
+  await sleep(500);
+}
+assert.ok(snapshot, '没能从页面里读到下拉框状态');
+
+console.log('=== 各下拉框的实际渲染结果 ===');
+const EXPECTED = ['p-city', 'p-store', 'w-city', 'w-store', 'm-family', 'm-cap', 'm-color'];
+for (const id of EXPECTED) {
+  const s = snapshot[id];
+  if (!s) { console.log(`  ${id.padEnd(10)} ❌ 页面上找不到这个 <select>`); continue; }
+  console.log(`  ${id.padEnd(10)} 选项=${String(s.n).padEnd(4)} 分组=${String(s.groups).padEnd(3)} ${s.disabled ? 'DISABLED' : '可用'}   首项="${s.first}"`);
+}
+
+console.log('\n=== 断言 ===');
+for (const id of EXPECTED) {
+  assert.ok(snapshot[id], `页面里应当有 #${id}`);
+  assert.ok(snapshot[id].n > 0, `#${id} 是空下拉框（0 个选项）—— 点开将什么都不显示`);
+}
+console.log('  ✓ 7 个下拉框全部有内容（不会出现「点开是空的」）');
+
+const cityKeys = JSON.parse(await evaluate(`JSON.stringify(Array.prototype.map.call(document.getElementById('w-city').options, function(o){return o.value;}))`));
+const mode = JSON.parse(await evaluate(
+  `fetch('/api/bootstrap').then(function(r){return r.json()}).then(function(b){
+     return JSON.stringify({ szOnly: Boolean(b.settings.shenzhenOnly), watchStores: b.settings.watchStores });
+   })`));
+
+if (mode.szOnly) {
+  assert.deepEqual(cityKeys, ['CN:深圳'], '深圳专属模式下城市下拉只应有深圳');
+  assert.equal(snapshot['w-city'].groups, 1, '只剩「中国大陆」一个分组');
+  assert.equal(snapshot['p-city'].n, 1, '优先门店的城市下拉也只应有深圳');
+  assert.equal(snapshot['w-store'].n, 3, `深圳应有 3 家门店，实际 ${snapshot['w-store'].n}`);
+  assert.equal(snapshot['p-store'].n, 3, `优先门店下拉应有 3 家深圳门店，实际 ${snapshot['p-store'].n}`);
+  assert.deepEqual(mode.watchStores.slice().sort(), ['R484', 'R761', 'R793'], '后端应锁定深圳 3 家门店');
+  const pickerDisplay = await evaluate(`getComputedStyle(document.getElementById('w-picker')).display`);
+  assert.equal(pickerDisplay, 'none', '深圳专属模式下不应出现「添加门店」入口');
+  const note = await evaluate(`(document.getElementById('mode-note') || {}).textContent || ''`);
+  assert.ok(note.indexOf('深圳专属模式') >= 0, '页面应当明确说明当前是深圳专属模式');
+  console.log(`  ✓ 深圳专属模式：城市只剩深圳，门店 3 家（${snapshot['w-store'].n}），增删入口已隐藏`);
+} else {
+  assert.ok(snapshot['w-city'].n > 1, '#w-city（同时监控的城市）应当列出多个城市');
+  assert.ok(snapshot['w-store'].n > 0, '#w-store（同时监控的门店）应当列出该城市的门店');
+  console.log('  ✓ 「同时监控的门店」的城市 / 门店下拉框已正确填充');
+
+  assert.ok(snapshot['w-city'].groups >= 2, '#w-city 应当按 中国大陆 / 香港 / 澳门 分组');
+  console.log('  ✓ 城市下拉按地区分组');
+
+  const beijing = cityKeys.find((k) => k === 'CN:北京');
+  assert.ok(beijing, '城市列表里应当有 北京');
+  await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(beijing)};s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(300);
+  const after = JSON.parse(await evaluate(PROBE));
+  assert.ok(after['w-store'].n >= 6, `切到北京后门店下拉应有 6 家，实际 ${after['w-store'].n}`);
+  console.log(`  ✓ 级联生效：切到「北京」→ 门店下拉变成 ${after['w-store'].n} 家，首项 "${after['w-store'].first}"`);
+
+  const macau = cityKeys.find((k) => k === 'MO:澳門');
+  assert.ok(macau, '城市列表里应当有 澳門');
+  await evaluate(`(function(){var s=document.getElementById('w-city');s.value=${JSON.stringify(macau)};s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(300);
+  const mo = JSON.parse(await evaluate(PROBE));
+  assert.equal(mo['w-store'].disabled, true, '澳门没有网上商店，门店下拉应当被禁用');
+  console.log('  ✓ 选到澳门时门店下拉被正确禁用');
+}
+
+assert.ok(snapshot['m-family'].n >= 5, '机型下拉应当有多个机型可选');
+assert.ok(snapshot['m-color'].n > 0, '颜色下拉应当有选项');
+console.log('  ✓ 机型 / 容量 / 颜色 三级下拉已填充');
+
+// 香港 / 深圳各自可以有更短的间隔（默认 5 秒），输入框必须被填上值
+const intervals = JSON.parse(await evaluate(`JSON.stringify((function(){
+  var cn = document.getElementById('interval'), hk = document.getElementById('hk-interval'),
+      sz = document.getElementById('sz-interval'), rsz = document.getElementById('rush-sz-interval');
+  return { cn: cn ? cn.value : null, hk: hk ? hk.value : null, sz: sz ? sz.value : null,
+           rsz: rsz ? rsz.value : null, hkMin: hk ? hk.getAttribute('min') : null,
+           szMin: sz ? sz.getAttribute('min') : null };
+})())`));
+assert.ok(intervals.cn, '大陆轮询间隔输入框应当有值');
+assert.ok(intervals.hk, '香港监控间隔输入框应当有值');
+assert.ok(Number(intervals.hk) >= 3 && Number(intervals.hk) <= 60,
+  `香港间隔应当是 3–60 秒的合理值，实际 ${intervals.hk}`);
+assert.ok(intervals.sz, '深圳通道间隔输入框应当有值（深圳快车道是默认关注的配置）');
+assert.ok(intervals.rsz, '深圳通道放货时段间隔输入框应当有值');
+assert.ok(Number(intervals.sz) >= 3 && Number(intervals.sz) <= 60,
+  `深圳通道间隔应当是 3–60 秒的合理值，实际 ${intervals.sz}`);
+assert.ok(Number(intervals.rsz) >= 3 && Number(intervals.rsz) <= 60, '深圳放货时段间隔下限应为 3 秒');
+
+if (mode.szOnly) {
+  const disabled = JSON.parse(await evaluate(
+    `JSON.stringify(['interval','hk-interval','rush-interval','rush-hk-interval','pri-interval'].map(function(id){
+       var e = document.getElementById(id); return e ? e.disabled : null;
+     }))`));
+  assert.ok(disabled.every(Boolean), '深圳专属模式下大陆 / 香港 / 优先通道的间隔输入框应置灰：' + JSON.stringify(disabled));
+  assert.equal(Number(intervals.sz), Number(intervals.hk), '深圳通道应与香港同速');
+  assert.equal(Number(intervals.rsz), 3, '放货时段深圳通道应为 3 秒');
+  console.log('  ✓ 深圳专属模式：大陆 / 香港 / 优先间隔输入框已置灰，深圳通道与香港同速');
+}
+console.log(`  ✓ 轮询间隔输入框已填值：大陆 ${intervals.cn} 秒 / 香港 ${intervals.hk} 秒（min=${intervals.hkMin}）/ ` +
+  `深圳 ${intervals.sz} 秒（min=${intervals.szMin}）/ 深圳放货 ${intervals.rsz} 秒`);
+
+console.log('\n✅ 界面渲染测试通过');
+cleanup();

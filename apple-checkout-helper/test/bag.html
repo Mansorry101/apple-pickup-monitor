@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- 模拟 Apple 购物袋：测试交接下单的「结账」按钮识别、「立即下单」拦截和有货门店选择。无头 Chrome 打开，看页面里的 RESULT -->
+<meta charset="utf-8">
+<body>
+<div id="bag">
+  <a href="#">返回购物</a>
+  <button data-autom="checkout" id="checkout">结账</button>
+  <button id="placeorder">立即下单</button>
+</div>
+<pre id="out">pending</pre>
+<script src="../src/defaults.js"></script>
+<script src="../src/core.js"></script>
+<script>
+(async () => {
+  const AF = window.__AF;
+  const res = {};
+  const c = AF.findCheckoutButton();
+  res.checkout = c && c.id;
+  res.forbiddenPlaceOrder = AF.isForbiddenButton(document.getElementById('placeorder'));
+
+  // 门店：有货门店优先于配置里的门店，第一个不可取货时选下一个
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="stores"><button>Apple 深圳益田假日广场 不可取货</button><button>Apple 深圳万象城 今天可取货</button><button>Apple 前海壹方城 今天可取货</button></div>');
+  let picked = '';
+  document.querySelectorAll('#stores button').forEach((b) => b.addEventListener('click', () => { picked = b.textContent; }));
+  await AF.pickStoreCard({ storeName: '深圳益田假日广场', storePrefs: ['前海壹方城', '深圳万象城'] }, () => {});
+  res.store = picked;
+
+  // 购物袋是空的：没有结账按钮
+  document.getElementById('bag').innerHTML = '<h1>你的购物袋中没有商品。</h1>';
+  res.emptyCheckout = AF.findCheckoutButton();
+  document.getElementById('out').textContent = 'RESULT ' + JSON.stringify(res);
+})().catch((e) => { document.getElementById('out').textContent = 'ERROR ' + e.message; });
+</script>
+</body>

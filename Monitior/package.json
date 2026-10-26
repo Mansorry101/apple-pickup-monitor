@@ -1,0 +1,26 @@
+{
+  "name": "apple-pickup-monitor",
+  "version": "2.9.0",
+  "private": true,
+  "type": "module",
+  "description": "监控 Apple Store 门市取货库存（默认深圳专属模式：只查深圳 3 家门店，与香港同速），有货时邮件通知",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "test-email": "node src/index.js --test-email",
+    "test": "node test/settings.mjs && node test/positive-path.mjs && node --test test/reliability.mjs test/push.mjs test/handoff.mjs",
+    "test:ui": "node test/ui.mjs",
+    "test:live": "node test/live.mjs",
+    "build-catalog": "node tools/build-catalog.mjs",
+    "test:air-live": "node test/air-regions-live.mjs",
+    "test-push": "node src/index.js --test-push"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "undici": "6.29.1"
+  }
+}

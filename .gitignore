@@ -1,0 +1,7 @@
+# 发布用的安装包，不进仓库（在 Releases 里发）
+*.zip
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini

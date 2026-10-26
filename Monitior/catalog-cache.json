@@ -1,0 +1,4370 @@
+{
+ "fetchedAt": "2026-09-21T10:14:44.181Z",
+ "regions": [
+  "CN",
+  "HK"
+ ],
+ "families": [
+  {
+   "name": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacities": [
+    "256GB",
+    "512GB",
+    "1TB",
+    "2TB"
+   ],
+   "colors": [
+    "Night Sky",
+    "Star White"
+   ],
+   "variants": [
+    {
+     "key": "iPhone Duo|256GB|Night Sky",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "256GB",
+     "color": "Night Sky",
+     "colorZh": "夜空色",
+     "parts": {
+      "CN": "MK2N4CH/A",
+      "HK": "MK2E4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2n4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15999,
+      "HK": 17499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|256GB|Star White",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "256GB",
+     "color": "Star White",
+     "colorZh": "星光白色",
+     "parts": {
+      "CN": "MK2M4CH/A",
+      "HK": "MK2D4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2m4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15999,
+      "HK": 17499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|512GB|Night Sky",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "512GB",
+     "color": "Night Sky",
+     "colorZh": "夜空色",
+     "parts": {
+      "CN": "MK2Q4CH/A",
+      "HK": "MK2G4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2q4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+     },
+     "prices": {
+      "CN": 17999,
+      "HK": 19299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|512GB|Star White",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "512GB",
+     "color": "Star White",
+     "colorZh": "星光白色",
+     "parts": {
+      "CN": "MK2P4CH/A",
+      "HK": "MK2F4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2p4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 17999,
+      "HK": 19299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|1TB|Night Sky",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "1TB",
+     "color": "Night Sky",
+     "colorZh": "夜空色",
+     "parts": {
+      "CN": "MK2U4CH/A",
+      "HK": "MK2J4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2u4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 22799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|1TB|Star White",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "1TB",
+     "color": "Star White",
+     "colorZh": "星光白色",
+     "parts": {
+      "CN": "MK2T4CH/A",
+      "HK": "MK2H4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2t4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 22799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|2TB|Night Sky",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "2TB",
+     "color": "Night Sky",
+     "colorZh": "夜空色",
+     "parts": {
+      "CN": "MK2W4CH/A",
+      "HK": "MK2L4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2w4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+     },
+     "prices": {
+      "CN": 26499,
+      "HK": 27999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Duo|2TB|Star White",
+     "family": "iPhone Duo",
+     "familySlug": "iphone-duo",
+     "screen": "7.6",
+     "capacity": "2TB",
+     "color": "Star White",
+     "colorZh": "星光白色",
+     "parts": {
+      "CN": "MK2V4CH/A",
+      "HK": "MK2K4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2v4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 26499,
+      "HK": 27999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacities": [
+    "256GB",
+    "512GB",
+    "1TB",
+    "2TB"
+   ],
+   "colors": [
+    "Black",
+    "Burgundy",
+    "Glacier",
+    "Silver"
+   ],
+   "variants": [
+    {
+     "key": "iPhone 18 Pro Max|256GB|Black",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "256GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJY64CH/A",
+      "HK": "MJXN4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy64ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10999,
+      "HK": 11499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|256GB|Burgundy",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "256GB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJY84CH/A",
+      "HK": "MJXQ4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy84ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10999,
+      "HK": 11499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|256GB|Glacier",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "256GB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJY94CH/A",
+      "HK": "MJXR4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy94ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10999,
+      "HK": 11499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|256GB|Silver",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "256GB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJY74CH/A",
+      "HK": "MJXP4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy74ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10999,
+      "HK": 11499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|512GB|Black",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "512GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJYA4CH/A",
+      "HK": "MJXT4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjya4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 12999,
+      "HK": 13299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|512GB|Burgundy",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "512GB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJYD4CH/A",
+      "HK": "MJXV4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyd4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 12999,
+      "HK": 13299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|512GB|Glacier",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "512GB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJYE4CH/A",
+      "HK": "MJXW4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjye4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 12999,
+      "HK": 13299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|512GB|Silver",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "512GB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJYC4CH/A",
+      "HK": "MJXU4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyc4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 12999,
+      "HK": 13299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|1TB|Black",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "1TB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJYF4CH/A",
+      "HK": "MJXX4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyf4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 16499,
+      "HK": 16799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|1TB|Burgundy",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "1TB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJYH4CH/A",
+      "HK": "MJY04ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyh4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 16499,
+      "HK": 16799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|1TB|Glacier",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "1TB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJYJ4CH/A",
+      "HK": "MJY14ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyj4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 16499,
+      "HK": 16799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|1TB|Silver",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "1TB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJYG4CH/A",
+      "HK": "MJXY4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyg4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 16499,
+      "HK": 16799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|2TB|Black",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "2TB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJYK4CH/A",
+      "HK": "MJY24ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyk4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 21999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|2TB|Burgundy",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "2TB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJYM4CH/A",
+      "HK": "MJY44ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjym4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 21999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|2TB|Glacier",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "2TB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJYN4CH/A",
+      "HK": "MJY54ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyn4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 21999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro Max|2TB|Silver",
+     "family": "iPhone 18 Pro Max",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.9",
+     "capacity": "2TB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJYL4CH/A",
+      "HK": "MJY34ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyl4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 21499,
+      "HK": 21999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacities": [
+    "256GB",
+    "512GB",
+    "1TB",
+    "2TB"
+   ],
+   "colors": [
+    "Black",
+    "Burgundy",
+    "Glacier",
+    "Silver"
+   ],
+   "variants": [
+    {
+     "key": "iPhone 18 Pro|256GB|Black",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJT74CH/A",
+      "HK": "MJRP4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt74ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 9999,
+      "HK": 10499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|256GB|Burgundy",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJT94CH/A",
+      "HK": "MJRR4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt94ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 9999,
+      "HK": 10499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|256GB|Glacier",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJTA4CH/A",
+      "HK": "MJRT4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjta4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 9999,
+      "HK": 10499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|256GB|Silver",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJT84CH/A",
+      "HK": "MJRQ4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt84ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 9999,
+      "HK": 10499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|512GB|Black",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJTC4CH/A",
+      "HK": "MJRU4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtc4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 11999,
+      "HK": 12299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|512GB|Burgundy",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJTE4CH/A",
+      "HK": "MJRW4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjte4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 11999,
+      "HK": 12299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|512GB|Glacier",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJTF4CH/A",
+      "HK": "MJRX4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtf4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 11999,
+      "HK": 12299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|512GB|Silver",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJTD4CH/A",
+      "HK": "MJRV4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtd4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 11999,
+      "HK": 12299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|1TB|Black",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "1TB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJTG4CH/A",
+      "HK": "MJRY4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtg4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15499,
+      "HK": 15799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|1TB|Burgundy",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "1TB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJTJ4CH/A",
+      "HK": "MJT14ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtj4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15499,
+      "HK": 15799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|1TB|Glacier",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "1TB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJTK4CH/A",
+      "HK": "MJT24ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtk4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15499,
+      "HK": 15799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|1TB|Silver",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "1TB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJTH4CH/A",
+      "HK": "MJT04ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjth4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 15499,
+      "HK": 15799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|2TB|Black",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "2TB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MJTL4CH/A",
+      "HK": "MJT34ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtl4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 20499,
+      "HK": 20999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|2TB|Burgundy",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "2TB",
+     "color": "Burgundy",
+     "colorZh": "勃艮第酒红色",
+     "parts": {
+      "CN": "MJTN4CH/A",
+      "HK": "MJT54ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtn4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 20499,
+      "HK": 20999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|2TB|Glacier",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "2TB",
+     "color": "Glacier",
+     "colorZh": "冰川蓝色",
+     "parts": {
+      "CN": "MJTP4CH/A",
+      "HK": "MJT64ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtp4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 20499,
+      "HK": 20999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 18 Pro|2TB|Silver",
+     "family": "iPhone 18 Pro",
+     "familySlug": "iphone-18-pro",
+     "screen": "6.3",
+     "capacity": "2TB",
+     "color": "Silver",
+     "colorZh": "银色",
+     "parts": {
+      "CN": "MJTM4CH/A",
+      "HK": "MJT44ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtm4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%8A%80%E8%89%B2"
+     },
+     "prices": {
+      "CN": 20499,
+      "HK": 20999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacities": [
+    "256GB",
+    "512GB",
+    "1TB"
+   ],
+   "colors": [
+    "Cloud White",
+    "Light Gold",
+    "Sky Blue",
+    "Space Black"
+   ],
+   "variants": [
+    {
+     "key": "iPhone Air|256GB|Cloud White",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "256GB",
+     "color": "Cloud White",
+     "colorZh": "云白色",
+     "parts": {
+      "CN": "MG334CH/A",
+      "HK": "MG2M4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg334ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|256GB|Light Gold",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "256GB",
+     "color": "Light Gold",
+     "colorZh": "浅金色",
+     "parts": {
+      "CN": "MG344CH/A",
+      "HK": "MG2N4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg344ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B7%BA%E9%87%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|256GB|Sky Blue",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "256GB",
+     "color": "Sky Blue",
+     "colorZh": "天蓝色",
+     "parts": {
+      "CN": "MG364CH/A",
+      "HK": "MG2P4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg364ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|256GB|Space Black",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "256GB",
+     "color": "Space Black",
+     "colorZh": "深空黑色",
+     "parts": {
+      "CN": "MG314CH/A",
+      "HK": "MG2L4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg314ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9499
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|512GB|Cloud White",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "512GB",
+     "color": "Cloud White",
+     "colorZh": "云白色",
+     "parts": {
+      "CN": "MG394CH/A",
+      "HK": "MG2T4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg394ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10799,
+      "HK": 11299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|512GB|Light Gold",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "512GB",
+     "color": "Light Gold",
+     "colorZh": "浅金色",
+     "parts": {
+      "CN": "MG3A4CH/A",
+      "HK": "MG2U4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3a4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B7%BA%E9%87%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10799,
+      "HK": 11299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|512GB|Sky Blue",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "512GB",
+     "color": "Sky Blue",
+     "colorZh": "天蓝色",
+     "parts": {
+      "CN": "MG3C4CH/A",
+      "HK": "MG2V4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3c4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 10799,
+      "HK": 11299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|512GB|Space Black",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "512GB",
+     "color": "Space Black",
+     "colorZh": "深空黑色",
+     "parts": {
+      "CN": "MG374CH/A",
+      "HK": "MG2Q4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg374ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+     },
+     "prices": {
+      "CN": 10799,
+      "HK": 11299
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|1TB|Cloud White",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "1TB",
+     "color": "Cloud White",
+     "colorZh": "云白色",
+     "parts": {
+      "CN": "MG3E4CH/A",
+      "HK": "MG2X4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3e4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 14299,
+      "HK": 14799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|1TB|Light Gold",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "1TB",
+     "color": "Light Gold",
+     "colorZh": "浅金色",
+     "parts": {
+      "CN": "MG3F4CH/A",
+      "HK": "MG2Y4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3f4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%B7%BA%E9%87%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 14299,
+      "HK": 14799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|1TB|Sky Blue",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "1TB",
+     "color": "Sky Blue",
+     "colorZh": "天蓝色",
+     "parts": {
+      "CN": "MG3G4CH/A",
+      "HK": "MG304ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3g4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 14299,
+      "HK": 14799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone Air|1TB|Space Black",
+     "family": "iPhone Air",
+     "familySlug": "iphone-air",
+     "screen": "6.5",
+     "capacity": "1TB",
+     "color": "Space Black",
+     "colorZh": "深空黑色",
+     "parts": {
+      "CN": "MG3D4CH/A",
+      "HK": "MG2W4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3d4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+     },
+     "prices": {
+      "CN": 14299,
+      "HK": 14799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacities": [
+    "256GB",
+    "512GB"
+   ],
+   "colors": [
+    "Black",
+    "Lavender",
+    "Mist Blue",
+    "Sage",
+    "White"
+   ],
+   "variants": [
+    {
+     "key": "iPhone 17|256GB|Black",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MG6W4CH/A",
+      "HK": "MG6J4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6w4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 6799,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|256GB|Lavender",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Lavender",
+     "colorZh": "薰衣草紫色",
+     "parts": {
+      "CN": "MG704CH/A",
+      "HK": "MG6M4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg704ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E8%96%B0%E8%A1%A3%E8%8D%89%E7%B4%AB%E8%89%B2"
+     },
+     "prices": {
+      "CN": 6799,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|256GB|Mist Blue",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Mist Blue",
+     "colorZh": "青雾蓝色",
+     "parts": {
+      "CN": "MG6Y4CH/A",
+      "HK": "MG6L4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6y4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%9C%A7%E8%97%8D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 6799,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|256GB|Sage",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "Sage",
+     "colorZh": "鼠尾草绿色",
+     "parts": {
+      "CN": "MG714CH/A",
+      "HK": "MG6N4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg714ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BC%A0%E5%B0%BE%E8%8D%89%E7%B6%A0%E8%89%B2"
+     },
+     "prices": {
+      "CN": 6799,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|256GB|White",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "256GB",
+     "color": "White",
+     "colorZh": "白色",
+     "parts": {
+      "CN": "MG6X4CH/A",
+      "HK": "MG6K4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6x4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 6799,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|512GB|Black",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MG724CH/A",
+      "HK": "MG6P4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg724ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9599
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|512GB|Lavender",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Lavender",
+     "colorZh": "薰衣草紫色",
+     "parts": {
+      "CN": "MG754CH/A",
+      "HK": "MG6U4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg754ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E8%96%B0%E8%A1%A3%E8%8D%89%E7%B4%AB%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9599
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|512GB|Mist Blue",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Mist Blue",
+     "colorZh": "青雾蓝色",
+     "parts": {
+      "CN": "MG744CH/A",
+      "HK": "MG6T4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg744ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%9C%A7%E8%97%8D%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9599
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|512GB|Sage",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "Sage",
+     "colorZh": "鼠尾草绿色",
+     "parts": {
+      "CN": "MG764CH/A",
+      "HK": "MG6V4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg764ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BC%A0%E5%B0%BE%E8%8D%89%E7%B6%A0%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9599
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17|512GB|White",
+     "family": "iPhone 17",
+     "familySlug": "iphone-17",
+     "screen": "6.3",
+     "capacity": "512GB",
+     "color": "White",
+     "colorZh": "白色",
+     "parts": {
+      "CN": "MG734CH/A",
+      "HK": "MG6Q4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg734ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 8799,
+      "HK": 9599
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacities": [
+    "256GB",
+    "512GB"
+   ],
+   "colors": [
+    "Black",
+    "Soft Pink",
+    "White"
+   ],
+   "variants": [
+    {
+     "key": "iPhone 17e|256GB|Black",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "256GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MHU44CH/A",
+      "HK": "MHRV4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu44ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5299,
+      "HK": 5999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17e|256GB|Soft Pink",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "256GB",
+     "color": "Soft Pink",
+     "colorZh": "浅粉色",
+     "parts": {
+      "CN": "MHU64CH/A",
+      "HK": "MHRX4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu64ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B7%BA%E7%B2%89%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5299,
+      "HK": 5999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17e|256GB|White",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "256GB",
+     "color": "White",
+     "colorZh": "白色",
+     "parts": {
+      "CN": "MHU54CH/A",
+      "HK": "MHRW4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu54ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5299,
+      "HK": 5999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17e|512GB|Black",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "512GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MHU74CH/A",
+      "HK": "MHRY4ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu74ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 7299,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17e|512GB|Soft Pink",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "512GB",
+     "color": "Soft Pink",
+     "colorZh": "浅粉色",
+     "parts": {
+      "CN": "MHUA4CH/A",
+      "HK": "MHU34ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhua4ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B7%BA%E7%B2%89%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 7299,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 17e|512GB|White",
+     "family": "iPhone 17e",
+     "familySlug": "iphone-17e",
+     "screen": "6.1",
+     "capacity": "512GB",
+     "color": "White",
+     "colorZh": "白色",
+     "parts": {
+      "CN": "MHU94CH/A",
+      "HK": "MHU04ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu94ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 7299,
+      "HK": 7799
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacities": [
+    "128GB"
+   ],
+   "colors": [
+    "Black",
+    "Pink",
+    "Teal",
+    "Ultramarine",
+    "White"
+   ],
+   "variants": [
+    {
+     "key": "iPhone 16|128GB|Black",
+     "family": "iPhone 16",
+     "familySlug": "iphone-16",
+     "screen": "6.1",
+     "capacity": "128GB",
+     "color": "Black",
+     "colorZh": "黑色",
+     "parts": {
+      "CN": "MYEV3CH/A",
+      "HK": "MYEV3ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myev3ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E9%BB%91%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5999,
+      "HK": 6999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 16|128GB|Pink",
+     "family": "iPhone 16",
+     "familySlug": "iphone-16",
+     "screen": "6.1",
+     "capacity": "128GB",
+     "color": "Pink",
+     "colorZh": "粉色",
+     "parts": {
+      "CN": "MYEX3CH/A",
+      "HK": "MYEX3ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myex3ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%B2%89%E7%B4%85%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5999,
+      "HK": 6999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 16|128GB|Teal",
+     "family": "iPhone 16",
+     "familySlug": "iphone-16",
+     "screen": "6.1",
+     "capacity": "128GB",
+     "color": "Teal",
+     "colorZh": "深青色",
+     "parts": {
+      "CN": "MYF03CH/A",
+      "HK": "MYF03ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myf03ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E6%B9%96%E6%B0%B4%E7%B6%A0%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5999,
+      "HK": 6999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 16|128GB|Ultramarine",
+     "family": "iPhone 16",
+     "familySlug": "iphone-16",
+     "screen": "6.1",
+     "capacity": "128GB",
+     "color": "Ultramarine",
+     "colorZh": "群青色",
+     "parts": {
+      "CN": "MYEY3CH/A",
+      "HK": "MYEY3ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myey3ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%BE%A4%E9%9D%92%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5999,
+      "HK": 6999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    },
+    {
+     "key": "iPhone 16|128GB|White",
+     "family": "iPhone 16",
+     "familySlug": "iphone-16",
+     "screen": "6.1",
+     "capacity": "128GB",
+     "color": "White",
+     "colorZh": "白色",
+     "parts": {
+      "CN": "MYEW3CH/A",
+      "HK": "MYEW3ZA/A"
+     },
+     "buyUrls": {
+      "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myew3ch/a",
+      "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%99%BD%E8%89%B2"
+     },
+     "prices": {
+      "CN": 5999,
+      "HK": 6999
+     },
+     "exactLinks": {
+      "CN": true,
+      "HK": true
+     },
+     "availableIn": [
+      "CN",
+      "HK"
+     ]
+    }
+   ]
+  }
+ ],
+ "variants": [
+  {
+   "key": "iPhone Duo|256GB|Night Sky",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "256GB",
+   "color": "Night Sky",
+   "colorZh": "夜空色",
+   "parts": {
+    "CN": "MK2N4CH/A",
+    "HK": "MK2E4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2n4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15999,
+    "HK": 17499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|256GB|Star White",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "256GB",
+   "color": "Star White",
+   "colorZh": "星光白色",
+   "parts": {
+    "CN": "MK2M4CH/A",
+    "HK": "MK2D4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2m4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15999,
+    "HK": 17499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|512GB|Night Sky",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "512GB",
+   "color": "Night Sky",
+   "colorZh": "夜空色",
+   "parts": {
+    "CN": "MK2Q4CH/A",
+    "HK": "MK2G4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2q4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+   },
+   "prices": {
+    "CN": 17999,
+    "HK": 19299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|512GB|Star White",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "512GB",
+   "color": "Star White",
+   "colorZh": "星光白色",
+   "parts": {
+    "CN": "MK2P4CH/A",
+    "HK": "MK2F4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2p4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 17999,
+    "HK": 19299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|1TB|Night Sky",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "1TB",
+   "color": "Night Sky",
+   "colorZh": "夜空色",
+   "parts": {
+    "CN": "MK2U4CH/A",
+    "HK": "MK2J4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2u4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 22799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|1TB|Star White",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "1TB",
+   "color": "Star White",
+   "colorZh": "星光白色",
+   "parts": {
+    "CN": "MK2T4CH/A",
+    "HK": "MK2H4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2t4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 22799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|2TB|Night Sky",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "2TB",
+   "color": "Night Sky",
+   "colorZh": "夜空色",
+   "parts": {
+    "CN": "MK2W4CH/A",
+    "HK": "MK2L4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2w4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%A4%9C%E7%A9%BA%E8%89%B2"
+   },
+   "prices": {
+    "CN": 26499,
+    "HK": 27999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Duo|2TB|Star White",
+   "family": "iPhone Duo",
+   "familySlug": "iphone-duo",
+   "screen": "7.6",
+   "capacity": "2TB",
+   "color": "Star White",
+   "colorZh": "星光白色",
+   "parts": {
+    "CN": "MK2V4CH/A",
+    "HK": "MK2K4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-duo/mk2v4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-duo/7.6-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E6%98%9F%E5%85%89%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 26499,
+    "HK": 27999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|256GB|Black",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "256GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJY64CH/A",
+    "HK": "MJXN4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy64ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10999,
+    "HK": 11499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|256GB|Burgundy",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "256GB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJY84CH/A",
+    "HK": "MJXQ4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy84ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10999,
+    "HK": 11499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|256GB|Glacier",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "256GB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJY94CH/A",
+    "HK": "MJXR4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy94ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10999,
+    "HK": 11499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|256GB|Silver",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "256GB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJY74CH/A",
+    "HK": "MJXP4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjy74ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10999,
+    "HK": 11499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|512GB|Black",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "512GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJYA4CH/A",
+    "HK": "MJXT4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjya4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 12999,
+    "HK": 13299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|512GB|Burgundy",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "512GB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJYD4CH/A",
+    "HK": "MJXV4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyd4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 12999,
+    "HK": 13299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|512GB|Glacier",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "512GB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJYE4CH/A",
+    "HK": "MJXW4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjye4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 12999,
+    "HK": 13299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|512GB|Silver",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "512GB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJYC4CH/A",
+    "HK": "MJXU4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyc4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 12999,
+    "HK": 13299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|1TB|Black",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "1TB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJYF4CH/A",
+    "HK": "MJXX4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyf4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 16499,
+    "HK": 16799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|1TB|Burgundy",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "1TB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJYH4CH/A",
+    "HK": "MJY04ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyh4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 16499,
+    "HK": 16799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|1TB|Glacier",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "1TB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJYJ4CH/A",
+    "HK": "MJY14ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyj4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 16499,
+    "HK": 16799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|1TB|Silver",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "1TB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJYG4CH/A",
+    "HK": "MJXY4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyg4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 16499,
+    "HK": 16799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|2TB|Black",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "2TB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJYK4CH/A",
+    "HK": "MJY24ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyk4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 21999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|2TB|Burgundy",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "2TB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJYM4CH/A",
+    "HK": "MJY44ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjym4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 21999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|2TB|Glacier",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "2TB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJYN4CH/A",
+    "HK": "MJY54ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyn4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 21999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro Max|2TB|Silver",
+   "family": "iPhone 18 Pro Max",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.9",
+   "capacity": "2TB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJYL4CH/A",
+    "HK": "MJY34ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjyl4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.9-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 21499,
+    "HK": 21999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|256GB|Black",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJT74CH/A",
+    "HK": "MJRP4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt74ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 9999,
+    "HK": 10499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|256GB|Burgundy",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJT94CH/A",
+    "HK": "MJRR4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt94ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 9999,
+    "HK": 10499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|256GB|Glacier",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJTA4CH/A",
+    "HK": "MJRT4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjta4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 9999,
+    "HK": 10499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|256GB|Silver",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJT84CH/A",
+    "HK": "MJRQ4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjt84ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 9999,
+    "HK": 10499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|512GB|Black",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJTC4CH/A",
+    "HK": "MJRU4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtc4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 11999,
+    "HK": 12299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|512GB|Burgundy",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJTE4CH/A",
+    "HK": "MJRW4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjte4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 11999,
+    "HK": 12299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|512GB|Glacier",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJTF4CH/A",
+    "HK": "MJRX4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtf4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 11999,
+    "HK": 12299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|512GB|Silver",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJTD4CH/A",
+    "HK": "MJRV4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtd4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 11999,
+    "HK": 12299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|1TB|Black",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "1TB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJTG4CH/A",
+    "HK": "MJRY4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtg4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15499,
+    "HK": 15799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|1TB|Burgundy",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "1TB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJTJ4CH/A",
+    "HK": "MJT14ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtj4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15499,
+    "HK": 15799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|1TB|Glacier",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "1TB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJTK4CH/A",
+    "HK": "MJT24ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtk4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15499,
+    "HK": 15799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|1TB|Silver",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "1TB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJTH4CH/A",
+    "HK": "MJT04ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjth4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 15499,
+    "HK": 15799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|2TB|Black",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "2TB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MJTL4CH/A",
+    "HK": "MJT34ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtl4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 20499,
+    "HK": 20999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|2TB|Burgundy",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "2TB",
+   "color": "Burgundy",
+   "colorZh": "勃艮第酒红色",
+   "parts": {
+    "CN": "MJTN4CH/A",
+    "HK": "MJT54ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtn4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%B8%83%E6%A0%B9%E5%9C%B0%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 20499,
+    "HK": 20999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|2TB|Glacier",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "2TB",
+   "color": "Glacier",
+   "colorZh": "冰川蓝色",
+   "parts": {
+    "CN": "MJTP4CH/A",
+    "HK": "MJT64ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtp4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E5%86%B0%E5%B7%9D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 20499,
+    "HK": 20999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 18 Pro|2TB|Silver",
+   "family": "iPhone 18 Pro",
+   "familySlug": "iphone-18-pro",
+   "screen": "6.3",
+   "capacity": "2TB",
+   "color": "Silver",
+   "colorZh": "银色",
+   "parts": {
+    "CN": "MJTM4CH/A",
+    "HK": "MJT44ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-18-pro/mjtm4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-18-pro/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-2tb-%E9%8A%80%E8%89%B2"
+   },
+   "prices": {
+    "CN": 20499,
+    "HK": 20999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|256GB|Cloud White",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "256GB",
+   "color": "Cloud White",
+   "colorZh": "云白色",
+   "parts": {
+    "CN": "MG334CH/A",
+    "HK": "MG2M4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg334ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|256GB|Light Gold",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "256GB",
+   "color": "Light Gold",
+   "colorZh": "浅金色",
+   "parts": {
+    "CN": "MG344CH/A",
+    "HK": "MG2N4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg344ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B7%BA%E9%87%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|256GB|Sky Blue",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "256GB",
+   "color": "Sky Blue",
+   "colorZh": "天蓝色",
+   "parts": {
+    "CN": "MG364CH/A",
+    "HK": "MG2P4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg364ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|256GB|Space Black",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "256GB",
+   "color": "Space Black",
+   "colorZh": "深空黑色",
+   "parts": {
+    "CN": "MG314CH/A",
+    "HK": "MG2L4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg314ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9499
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|512GB|Cloud White",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "512GB",
+   "color": "Cloud White",
+   "colorZh": "云白色",
+   "parts": {
+    "CN": "MG394CH/A",
+    "HK": "MG2T4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg394ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10799,
+    "HK": 11299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|512GB|Light Gold",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "512GB",
+   "color": "Light Gold",
+   "colorZh": "浅金色",
+   "parts": {
+    "CN": "MG3A4CH/A",
+    "HK": "MG2U4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3a4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B7%BA%E9%87%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10799,
+    "HK": 11299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|512GB|Sky Blue",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "512GB",
+   "color": "Sky Blue",
+   "colorZh": "天蓝色",
+   "parts": {
+    "CN": "MG3C4CH/A",
+    "HK": "MG2V4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3c4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 10799,
+    "HK": 11299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|512GB|Space Black",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "512GB",
+   "color": "Space Black",
+   "colorZh": "深空黑色",
+   "parts": {
+    "CN": "MG374CH/A",
+    "HK": "MG2Q4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg374ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+   },
+   "prices": {
+    "CN": 10799,
+    "HK": 11299
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|1TB|Cloud White",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "1TB",
+   "color": "Cloud White",
+   "colorZh": "云白色",
+   "parts": {
+    "CN": "MG3E4CH/A",
+    "HK": "MG2X4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3e4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%B5%AE%E9%9B%B2%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 14299,
+    "HK": 14799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|1TB|Light Gold",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "1TB",
+   "color": "Light Gold",
+   "colorZh": "浅金色",
+   "parts": {
+    "CN": "MG3F4CH/A",
+    "HK": "MG2Y4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3f4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E6%B7%BA%E9%87%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 14299,
+    "HK": 14799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|1TB|Sky Blue",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "1TB",
+   "color": "Sky Blue",
+   "colorZh": "天蓝色",
+   "parts": {
+    "CN": "MG3G4CH/A",
+    "HK": "MG304ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3g4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%A9%E8%97%8D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 14299,
+    "HK": 14799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone Air|1TB|Space Black",
+   "family": "iPhone Air",
+   "familySlug": "iphone-air",
+   "screen": "6.5",
+   "capacity": "1TB",
+   "color": "Space Black",
+   "colorZh": "深空黑色",
+   "parts": {
+    "CN": "MG3D4CH/A",
+    "HK": "MG2W4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-air/mg3d4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-air/6.5-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-1tb-%E5%A4%AA%E7%A9%BA%E9%BB%91"
+   },
+   "prices": {
+    "CN": 14299,
+    "HK": 14799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|256GB|Black",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MG6W4CH/A",
+    "HK": "MG6J4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6w4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 6799,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|256GB|Lavender",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Lavender",
+   "colorZh": "薰衣草紫色",
+   "parts": {
+    "CN": "MG704CH/A",
+    "HK": "MG6M4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg704ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E8%96%B0%E8%A1%A3%E8%8D%89%E7%B4%AB%E8%89%B2"
+   },
+   "prices": {
+    "CN": 6799,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|256GB|Mist Blue",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Mist Blue",
+   "colorZh": "青雾蓝色",
+   "parts": {
+    "CN": "MG6Y4CH/A",
+    "HK": "MG6L4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6y4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%9C%A7%E8%97%8D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 6799,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|256GB|Sage",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "Sage",
+   "colorZh": "鼠尾草绿色",
+   "parts": {
+    "CN": "MG714CH/A",
+    "HK": "MG6N4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg714ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BC%A0%E5%B0%BE%E8%8D%89%E7%B6%A0%E8%89%B2"
+   },
+   "prices": {
+    "CN": 6799,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|256GB|White",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "256GB",
+   "color": "White",
+   "colorZh": "白色",
+   "parts": {
+    "CN": "MG6X4CH/A",
+    "HK": "MG6K4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg6x4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 6799,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|512GB|Black",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MG724CH/A",
+    "HK": "MG6P4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg724ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9599
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|512GB|Lavender",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Lavender",
+   "colorZh": "薰衣草紫色",
+   "parts": {
+    "CN": "MG754CH/A",
+    "HK": "MG6U4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg754ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E8%96%B0%E8%A1%A3%E8%8D%89%E7%B4%AB%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9599
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|512GB|Mist Blue",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Mist Blue",
+   "colorZh": "青雾蓝色",
+   "parts": {
+    "CN": "MG744CH/A",
+    "HK": "MG6T4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg744ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%9C%A7%E8%97%8D%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9599
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|512GB|Sage",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "Sage",
+   "colorZh": "鼠尾草绿色",
+   "parts": {
+    "CN": "MG764CH/A",
+    "HK": "MG6V4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg764ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BC%A0%E5%B0%BE%E8%8D%89%E7%B6%A0%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9599
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17|512GB|White",
+   "family": "iPhone 17",
+   "familySlug": "iphone-17",
+   "screen": "6.3",
+   "capacity": "512GB",
+   "color": "White",
+   "colorZh": "白色",
+   "parts": {
+    "CN": "MG734CH/A",
+    "HK": "MG6Q4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17/mg734ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17/6.3-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 8799,
+    "HK": 9599
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|256GB|Black",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "256GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MHU44CH/A",
+    "HK": "MHRV4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu44ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5299,
+    "HK": 5999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|256GB|Soft Pink",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "256GB",
+   "color": "Soft Pink",
+   "colorZh": "浅粉色",
+   "parts": {
+    "CN": "MHU64CH/A",
+    "HK": "MHRX4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu64ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E6%B7%BA%E7%B2%89%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5299,
+    "HK": 5999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|256GB|White",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "256GB",
+   "color": "White",
+   "colorZh": "白色",
+   "parts": {
+    "CN": "MHU54CH/A",
+    "HK": "MHRW4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu54ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-256gb-%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5299,
+    "HK": 5999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|512GB|Black",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "512GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MHU74CH/A",
+    "HK": "MHRY4ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu74ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 7299,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|512GB|Soft Pink",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "512GB",
+   "color": "Soft Pink",
+   "colorZh": "浅粉色",
+   "parts": {
+    "CN": "MHUA4CH/A",
+    "HK": "MHU34ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhua4ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E6%B7%BA%E7%B2%89%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 7299,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 17e|512GB|White",
+   "family": "iPhone 17e",
+   "familySlug": "iphone-17e",
+   "screen": "6.1",
+   "capacity": "512GB",
+   "color": "White",
+   "colorZh": "白色",
+   "parts": {
+    "CN": "MHU94CH/A",
+    "HK": "MHU04ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-17e/mhu94ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-17e/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-512gb-%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 7299,
+    "HK": 7799
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 16|128GB|Black",
+   "family": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacity": "128GB",
+   "color": "Black",
+   "colorZh": "黑色",
+   "parts": {
+    "CN": "MYEV3CH/A",
+    "HK": "MYEV3ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myev3ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E9%BB%91%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5999,
+    "HK": 6999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 16|128GB|Pink",
+   "family": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacity": "128GB",
+   "color": "Pink",
+   "colorZh": "粉色",
+   "parts": {
+    "CN": "MYEX3CH/A",
+    "HK": "MYEX3ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myex3ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%B2%89%E7%B4%85%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5999,
+    "HK": 6999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 16|128GB|Teal",
+   "family": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacity": "128GB",
+   "color": "Teal",
+   "colorZh": "深青色",
+   "parts": {
+    "CN": "MYF03CH/A",
+    "HK": "MYF03ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myf03ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E6%B9%96%E6%B0%B4%E7%B6%A0%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5999,
+    "HK": 6999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 16|128GB|Ultramarine",
+   "family": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacity": "128GB",
+   "color": "Ultramarine",
+   "colorZh": "群青色",
+   "parts": {
+    "CN": "MYEY3CH/A",
+    "HK": "MYEY3ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myey3ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%BE%A4%E9%9D%92%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5999,
+    "HK": 6999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  },
+  {
+   "key": "iPhone 16|128GB|White",
+   "family": "iPhone 16",
+   "familySlug": "iphone-16",
+   "screen": "6.1",
+   "capacity": "128GB",
+   "color": "White",
+   "colorZh": "白色",
+   "parts": {
+    "CN": "MYEW3CH/A",
+    "HK": "MYEW3ZA/A"
+   },
+   "buyUrls": {
+    "CN": "https://www.apple.com.cn/shop/buy-iphone/iphone-16/myew3ch/a",
+    "HK": "https://www.apple.com/hk-zh/shop/buy-iphone/iphone-16/6.1-%E5%90%8B%E9%A1%AF%E7%A4%BA%E5%99%A8-128gb-%E7%99%BD%E8%89%B2"
+   },
+   "prices": {
+    "CN": 5999,
+    "HK": 6999
+   },
+   "exactLinks": {
+    "CN": true,
+    "HK": true
+   },
+   "availableIn": [
+    "CN",
+    "HK"
+   ]
+  }
+ ],
+ "errors": []
+}

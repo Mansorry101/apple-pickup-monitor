@@ -1,0 +1,31 @@
+# 换行符策略：仓库里统一存 LF，检出时按平台/类型还原。
+# 这个项目同时有 Windows 脚本和跨平台 JS，不写清楚很容易被 git 的
+# autocrlf 改坏 —— 尤其是 .bat 和 .vbs，必须是 CRLF 才能双击运行。
+
+* text=auto eol=lf
+
+# Windows 专用脚本：必须 CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+*.vbs  text eol=crlf
+
+# 给 Windows 用户看的纯文本：CRLF（记事本友好）
+*.txt  text eol=crlf
+
+# 跨平台脚本与源码
+*.sh   text eol=lf
+Dockerfile text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.service text eol=lf
+*.plist   text eol=lf
+
+# 二进制（别做换行符转换）
+*.png  binary
+*.jpg  binary
+*.zip  binary
+*.ico  binary

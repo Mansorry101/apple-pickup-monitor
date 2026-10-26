@@ -1,0 +1,18 @@
+[Unit]
+Description=Apple Store HK Pickup Monitor (Canton Road)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=__NODE_BIN__ __PROJECT_DIR__/src/index.js
+Restart=always
+RestartSec=15
+StandardOutput=append:__PROJECT_DIR__/monitor.log
+StandardError=append:__PROJECT_DIR__/monitor.log
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

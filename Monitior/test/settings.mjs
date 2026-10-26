@@ -1,0 +1,284 @@
+/**
+ * config.json 读写与校验测试。
+ *
+ * 覆盖曾经踩过的坑：
+ *  · 香港料号形如 MJXU4ZA/A（斜杠后只有 1 个字母），早期正则要求 2 个字母，
+ *    导致所有目标被静默丢弃、回退成默认值。
+ *  · 澳门没有网上商店，不能当成可监控门店。
+ *  · 「用户故意清空机型」不能被偷偷塞回默认值。
+ *
+ * 运行： node test/settings.mjs
+ */
+import assert from 'node:assert';
+import {
+  normalizeSettings, DEFAULT_SETTINGS, enrichTargets, regionOfPartNumber,
+} from '../src/settings.js';
+import { STORE_BY_ID } from '../src/stores.js';
+
+console.log('=== 料号 → 地区推断 ===');
+{
+  assert.equal(regionOfPartNumber('MJYC4CH/A'), 'CN');
+  assert.equal(regionOfPartNumber('MJXU4ZA/A'), 'HK');
+  assert.equal(regionOfPartNumber('MH3A4ZP/A'), 'HK');
+  assert.equal(regionOfPartNumber('MJXU4XX/A'), null);
+  assert.equal(regionOfPartNumber('garbage'), null);
+  console.log('  ✓ CH→大陆，ZA/ZP→香港，其它不认');
+}
+
+console.log('\n=== 旧版配置自动迁移（v1 → v2）===');
+{
+  const r = normalizeSettings({
+    version: 1,
+    shenzhenOnly: false,
+    priorityStore: 'R499',
+    cantonOnly: true,
+    targets: [
+      { partNumber: 'MJXU4ZA/A', name: 'iPhone 18 Pro Max 512GB 銀色' },
+      { partNumber: 'MJXT4ZA/A', name: 'iPhone 18 Pro Max 512GB 黑色' },
+    ],
+  });
+  assert.equal(r.version, 2);
+  assert.equal(r.priorityOnly, true, 'cantonOnly 应迁移为 priorityOnly');
+  assert.equal(r.targets.length, 2, '旧料号不应被丢弃');
+  assert.deepEqual(r.targets[0].parts, { HK: 'MJXU4ZA/A' }, '旧料号应推断出香港地区');
+  assert.deepEqual(r.watchStores, ['R499'], '未提供 watchStores 时应回填优先门店，且不夹带默认门店');
+  console.log('  ✓ 旧配置的 cantonOnly / partNumber 都被正确迁移');
+}
+
+console.log('\n=== 默认值：深圳专属模式（只查深圳 3 家门店）===');
+{
+  assert.equal(DEFAULT_SETTINGS.shenzhenOnly, true, '默认开启深圳专属模式');
+  assert.equal(DEFAULT_SETTINGS.priorityStore, 'R484');
+  assert.deepEqual(DEFAULT_SETTINGS.watchStores, ['R484', 'R761', 'R793'], '默认监控深圳 3 家门店');
+  assert.ok(DEFAULT_SETTINGS.watchStores.every((id) => STORE_BY_ID[id].city === '深圳'),
+    '默认监控门店必须全部在深圳');
+  assert.equal(STORE_BY_ID[DEFAULT_SETTINGS.priorityStore].city, '深圳');
+  for (const t of DEFAULT_SETTINGS.targets) {
+    assert.ok(Object.values(t.parts).every((pn) => pn.endsWith('CH/A')),
+      '默认机型必须是大陆料号（深圳门店只卖 CH/A）：' + JSON.stringify(t.parts));
+  }
+  assert.equal(DEFAULT_SETTINGS.szIntervalSeconds, 5, '深圳通道默认 5 秒（与香港同速）');
+  assert.equal(DEFAULT_SETTINGS.rushSzIntervalSeconds, 3, '放货时段深圳通道默认 3 秒（与香港同速）');
+  console.log(`  ✓ 默认 ${DEFAULT_SETTINGS.watchStores.join(' / ')}，优先 ${DEFAULT_SETTINGS.priorityStore}，深圳通道 5 秒 / 放货 3 秒`);
+}
+
+console.log('\n=== 深圳专属模式：屏蔽大陆其他城市与香港 ===');
+{
+  // 优先门店给了香港 / 北京，也要被拉回深圳
+  assert.equal(normalizeSettings({ priorityStore: 'R499' }).priorityStore, 'R484', '香港门店不能当优先门店');
+  assert.equal(normalizeSettings({ priorityStore: 'R401' }).priorityStore, 'R484', '大陆其他城市不能当优先门店');
+  assert.equal(normalizeSettings({ priorityStore: 'R761' }).priorityStore, 'R761', '深圳门店可以当优先门店');
+
+  // 监控门店被硬锁在深圳 3 家
+  const r = normalizeSettings({ priorityStore: 'R761', watchStores: ['R401', 'R499', 'R761'] });
+  assert.deepEqual(r.watchStores, ['R761', 'R484', 'R793'], '只保留深圳 3 家，且优先门店排最前');
+  assert.ok(r.watchStores.every((id) => STORE_BY_ID[id].city === '深圳'), '不能夹带任何非深圳门店');
+
+  // 深圳通道速度跟香港对齐，优先通道关闭（已被深圳通道覆盖）
+  const speed = normalizeSettings({ hkIntervalSeconds: 4, rushHkIntervalSeconds: 2 });
+  assert.equal(speed.hkIntervalSeconds, 4);
+  assert.equal(speed.szIntervalSeconds, 4, '深圳通道常规间隔应跟随香港');
+  assert.equal(speed.rushSzIntervalSeconds, 3, '放货间隔同样跟随香港（下限 3 秒）');
+  assert.equal(normalizeSettings({}).priorityBoost, false, '深圳专属模式下优先通道自动关闭');
+
+  // 关掉之后恢复原有多城市行为
+  const off = normalizeSettings({ shenzhenOnly: false, priorityStore: 'R401', watchStores: ['R401', 'R499'] });
+  assert.deepEqual(off.watchStores, ['R401', 'R499'], '关闭后允许跨城市监控');
+  assert.equal(off.priorityStore, 'R401');
+  console.log('  ✓ 优先门店 / 监控门店被锁在深圳 3 家，间隔跟随香港，关闭后恢复多城市');
+}
+
+console.log('\n=== 料号校验 ===');
+{
+  const ok = ['MJXU4ZA/A', 'MJXT4ZA/A', 'MH3A4ZP/A', 'MJYC4CH/A', 'MHU64CH/A'];
+  const r = normalizeSettings({ targets: ok.map((partNumber) => ({ partNumber })) });
+  assert.equal(r.targets.length, ok.length, `这些真实料号都应被接受：${ok.join(', ')}`);
+  console.log(`  ✓ ${ok.length} 个真实料号全部通过`);
+
+  const bad = ['', 'ABC', 'MJXU4ZA', 'MJXU4ZA/', '/A', 'mj xu4za/a'];
+  assert.equal(normalizeSettings({ targets: bad.map((partNumber) => ({ partNumber })) }).targets.length, 0);
+  console.log('  ✓ 非法料号被正确过滤');
+
+  // 新版格式：key + parts
+  const r2 = normalizeSettings({
+    targets: [{ key: 'iPhone 18 Pro Max|512GB|Silver', parts: { CN: 'mjYC4ch/a', HK: 'MJXU4ZA/A' } }],
+  });
+  assert.equal(r2.targets.length, 1);
+  assert.deepEqual(r2.targets[0].parts, { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' }, '料号应统一大写');
+  console.log('  ✓ 新版 key+parts 格式正确规范化（大小写归一）');
+
+  // 两部地区都没有的 key 应被丢弃
+  assert.equal(normalizeSettings({ targets: [{ key: 'X', parts: { MO: 'MJXU4ZA/A' } }] }).targets.length, 0);
+  console.log('  ✓ 没有可查询地区料号的目标被丢弃');
+
+  // 去重
+  const r3 = normalizeSettings({
+    targets: [{ partNumber: 'MJXU4ZA/A' }, { partNumber: 'mjxu4za/a' }],
+  });
+  assert.equal(r3.targets.length, 1, '重复料号（含大小写差异）应去重');
+  console.log('  ✓ 重复目标去重');
+}
+
+console.log('\n=== 显式清空 vs 未提供 ===');
+{
+  assert.equal(normalizeSettings({ targets: [] }).targets.length, 0, '显式传空数组应保持为空');
+  console.log('  ✓ 显式清空 targets 被尊重');
+  assert.equal(
+    normalizeSettings({ shenzhenOnly: false, priorityStore: 'R428' }).targets.length,
+    DEFAULT_SETTINGS.targets.length,
+    '未提供 targets 时应用默认值',
+  );
+  console.log('  ✓ 未提供 targets 时回退默认值');
+}
+
+console.log('\n=== 门店校验（关闭深圳专属模式时）===');
+{
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  assert.equal(g({ priorityStore: 'R428' }).priorityStore, 'R428', '香港门店可用');
+  assert.equal(g({ priorityStore: 'R401' }).priorityStore, 'R401', '大陆门店可用');
+  assert.equal(g({ priorityStore: 'R484' }).priorityStore, 'R484', '深圳门店可用');
+  assert.equal(g({ priorityStore: 'R999' }).priorityStore, DEFAULT_SETTINGS.priorityStore, '非法门店应回退');
+  assert.equal(g({ priorityStore: 'hack' }).priorityStore, DEFAULT_SETTINGS.priorityStore);
+  console.log('  ✓ 合法门店保留，非法门店回退到默认优先门店');
+
+  assert.equal(
+    g({ priorityStore: 'R697' }).priorityStore,
+    DEFAULT_SETTINGS.priorityStore,
+    '澳门门店没有网上商店，不能作为优先门店',
+  );
+  console.log('  ✓ 澳门门店被拒绝作为优先门店（无网上商店）');
+}
+
+console.log('\n=== 监控门店列表清洗（关闭深圳专属模式时）===');
+{
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  const r = g({ priorityStore: 'R401', watchStores: ['R401', 'R499', 'R499', 'R697', 'R888', ''] });
+  assert.deepEqual(r.watchStores, ['R401', 'R499'], '应去重、剔除澳门与非法门店');
+  console.log('  ✓ 去重 + 剔除澳门/非法门店');
+
+  // 优先门店必须出现在监控列表里
+  const r2 = g({ priorityStore: 'R499', watchStores: ['R401'] });
+  assert.equal(r2.watchStores[0], 'R499', '优先门店应被补进监控列表的开头');
+  console.log('  ✓ 优先门店始终包含在监控列表中');
+
+  const r3 = g({ priorityStore: 'R401', watchStores: [] });
+  assert.deepEqual(r3.watchStores, ['R401']);
+  console.log('  ✓ 空列表回填优先门店');
+
+  // 回归：换优先门店时，不能把默认门店（R484）也悄悄塞进监控列表
+  const r4 = g({ priorityStore: 'R401' });
+  assert.deepEqual(r4.watchStores, ['R401'], '只改优先门店不应扩大监控范围');
+  console.log('  ✓ 只改优先门店不会夹带默认门店');
+}
+
+console.log('\n=== 数值范围钳制 ===');
+{
+  assert.equal(normalizeSettings({ pollIntervalSeconds: 1 }).pollIntervalSeconds, 15, '轮询间隔过低应被抬到 15');
+  assert.equal(normalizeSettings({ pollIntervalSeconds: 999999 }).pollIntervalSeconds, 86400);
+  assert.equal(normalizeSettings({ repeatAlertMinutes: -5 }).repeatAlertMinutes, 0);
+  assert.equal(normalizeSettings({ uiPort: 80 }).uiPort, 1024)
+  assert.equal(normalizeSettings({ pollIntervalSeconds: 'abc' }).pollIntervalSeconds, 60);
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 1 }).hkIntervalSeconds, 3, '香港间隔过低应被抬到 3');
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 5 }).hkIntervalSeconds, 5);
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 999999 }).hkIntervalSeconds, 86400);
+  assert.equal(normalizeSettings({ hkIntervalSeconds: 'abc' }).hkIntervalSeconds, 5, '香港间隔缺省应为 5 秒');
+  assert.equal(normalizeSettings({}).hkIntervalSeconds, 5, '没配置时香港间隔默认 5 秒，保证香港查得够勤');
+  // 深圳通道：和香港同级的下限（3 秒），默认 5 秒（关闭深圳专属模式时独立生效）
+  const g = (input) => normalizeSettings({ shenzhenOnly: false, ...input });
+  assert.equal(g({ szIntervalSeconds: 1 }).szIntervalSeconds, 3, '深圳通道间隔过低应被抬到 3');
+  assert.equal(g({ szIntervalSeconds: 5 }).szIntervalSeconds, 5);
+  assert.equal(g({ szIntervalSeconds: 'abc' }).szIntervalSeconds, 5, '深圳通道缺省应为 5 秒');
+  assert.equal(g({}).szIntervalSeconds, 5, '没配置时深圳通道默认 5 秒');
+  assert.equal(g({ rushSzIntervalSeconds: 1 }).rushSzIntervalSeconds, 3, '放货时段深圳通道也不低于 3 秒');
+  // 香港间隔独立于大陆间隔，互不影响
+  const both = g({ pollIntervalSeconds: 120, hkIntervalSeconds: 5 });
+  assert.equal(both.pollIntervalSeconds, 120);
+  assert.equal(both.hkIntervalSeconds, 5);
+  console.log('  ✓ 轮询间隔 / 香港间隔 / 深圳通道间隔 / 重复提醒 / 端口 都被正确钳制');
+
+  // 放货时段与优先通道
+  const d = g({});
+  assert.equal(d.rushEnabled, true); assert.equal(d.rushStart, '06:00'); assert.equal(d.rushEnd, '09:00');
+  assert.equal(d.priorityBoost, true); assert.equal(d.priorityIntervalSeconds, 20);
+  const r = g({ rushStart: '6:5', rushEnd: '7:30', rushPollIntervalSeconds: 1, rushHkIntervalSeconds: 1,
+    rushPriorityIntervalSeconds: 1, priorityIntervalSeconds: 1, rushEnabled: false, priorityBoost: false });
+  assert.equal(r.rushStart, '06:00', '格式不对回到默认'); assert.equal(r.rushEnd, '07:30');
+  assert.equal(r.rushPollIntervalSeconds, 15, '放货时段大陆也不低于 15 秒');
+  assert.equal(r.rushHkIntervalSeconds, 3); assert.equal(r.rushPriorityIntervalSeconds, 5); assert.equal(r.priorityIntervalSeconds, 5);
+  assert.equal(r.rushEnabled, false); assert.equal(r.priorityBoost, false);
+  const star = normalizeSettings({ targets: [{ key: 'X', parts: { HK: 'MJXU4ZA/A' }, priority: true }, { key: 'Y', parts: { HK: 'MJXT4ZA/A' } }] });
+  assert.equal(star.targets[0].priority, true); assert.equal(star.targets[1].priority, undefined);
+  console.log('  ✓ 放货时段 / 优先通道设置被正确校验，机型的「优先」标记会保存');
+}
+
+console.log('\n=== 目录补全（多地区）===');
+{
+  const catalog = {
+    regions: ['CN', 'HK'],
+    variants: [{
+      key: 'iPhone 18 Pro Max|512GB|Silver',
+      family: 'iPhone 18 Pro Max', capacity: '512GB', color: 'Silver', colorZh: '银色',
+      parts: { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' },
+      buyUrls: { CN: 'https://cn/x', HK: 'https://hk/y' },
+      prices: { CN: 12999, HK: 13299 },
+      availableIn: ['CN', 'HK'],
+    }],
+  };
+  const [t] = enrichTargets([{ key: 'iPhone 18 Pro Max|512GB|Silver', parts: {} }], catalog);
+  assert.equal(t.name, 'iPhone 18 Pro Max 512GB 银色');
+  assert.deepEqual(t.parts, { CN: 'MJYC4CH/A', HK: 'MJXU4ZA/A' }, '应补全两地料号');
+  assert.equal(t.buyUrls.CN, 'https://cn/x');
+  console.log('  ✓ 一次选择补全两地料号与链接');
+
+  // 只有香港料号的旧目标，也能被目录补成两地
+  const [u] = enrichTargets([{ key: 'MJXU4ZA/A', parts: { HK: 'MJXU4ZA/A' } }], catalog);
+  assert.deepEqual(u.parts, { HK: 'MJXU4ZA/A', CN: 'MJYC4CH/A' }, '按料号反查也能补全');
+  console.log('  ✓ 按旧料号反查目录并补全');
+
+  const [v] = enrichTargets([{ key: 'ZZZ', parts: { HK: 'ZZZZ9ZZ/A' } }], catalog);
+  assert.equal(v.name, undefined, '目录里没有的目标应原样保留、不崩');
+  assert.deepEqual(v.parts, { HK: 'ZZZZ9ZZ/A' });
+  console.log('  ✓ 目录外的目标原样保留');
+}
+
+console.log('\n=== 门店目录完整性 ===');
+{
+  const { STORES, CITIES, REGIONS } = await import('../src/stores.js');
+  assert.equal(STORES.length, 57, '大中华区应有 57 家 Apple Store');
+  const byRegion = STORES.reduce((m, s) => ((m[s.region] = (m[s.region] || 0) + 1), m), {});
+  assert.deepEqual(byRegion, { CN: 49, HK: 6, MO: 2 });
+  console.log(`  ✓ 门店数：大陆 ${byRegion.CN} + 香港 ${byRegion.HK} + 澳门 ${byRegion.MO} = 57`);
+
+  assert.equal(CITIES.length, 27, '应有 27 个有 Apple Store 的城市');
+  assert.ok(CITIES.every((c) => c.stores.length === c.storeCount && c.storeCount > 0));
+  console.log(`  ✓ 城市 ${CITIES.length} 个，与门店对应关系一致`);
+
+  // 大陆每个城市都必须有定位用的「区」，否则查询会恒返回 0 家店
+  const noDistrict = STORES.filter((s) => s.region === 'CN' && !s.district);
+  assert.equal(noDistrict.length, 0, `这些大陆城市缺 district，会导致查不到库存：${noDistrict.map((s) => s.city).join(',')}`);
+  console.log('  ✓ 大陆每个城市的定位行政区都已填好');
+
+  assert.equal(REGIONS.MO.onlineStore, false, '澳门应标记为不可查询');
+  assert.equal(REGIONS.CN.canaryPart, 'MH3A4CH/A');
+  assert.equal(REGIONS.HK.canaryPart, 'MH3A4ZP/A');
+  console.log('  ✓ 澳门标记为不可查询；两地哨兵料号正确');
+
+  // 深圳门店必须带正确的定位行政区：前海壹方城在宝安、万象城在罗湖、益田假日广场在南山。
+  // 区的取值直接决定大陆定位落在哪，填错会把定位带偏、漏掉真实有货的门店。
+  const szDistrict = Object.fromEntries(
+    STORES.filter((s) => s.city === '深圳').map((s) => [s.id, `${s.name}→${s.district}`]),
+  );
+  assert.deepEqual(szDistrict, {
+    R793: '前海壹方城→宝安区',
+    R761: '深圳万象城→罗湖区',
+    R484: '深圳益田假日广场→南山区',
+  });
+  console.log('  ✓ 深圳 3 家门店的定位行政区正确（宝安 / 罗湖 / 南山）');
+
+  assert.ok(STORE_BY_ID.R499 && STORE_BY_ID.R499.region === 'HK');
+  assert.ok(STORE_BY_ID.R401 && STORE_BY_ID.R401.region === 'CN');
+  assert.ok(STORE_BY_ID.R484 && STORE_BY_ID.R484.region === 'CN' && STORE_BY_ID.R484.city === '深圳');
+  console.log('  ✓ 门店索引可用');
+}
+
+console.log('\n✅ 全部通过');

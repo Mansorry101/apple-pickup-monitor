@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Apple 结账速填 · 设置</title>
+<link rel="stylesheet" href="options.css" />
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <div class="hero-in">
+      <h1>Apple 结账速填</h1>
+      <p>抢购时点一下悬浮按钮，扩展自动走完：选取货日期和门店 → 填取货人信息（覆盖旧值）→ 选微信支付 → 停在检查订单页。最后一步「立即下单」永远由你点。</p>
+      <div class="pill" id="statusPill">数据只保存在本机浏览器，不会上传</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. 取货方式</h2>
+      <p class="hint">决定扩展优先点「门店取货」还是「送货」。</p>
+      <div class="segmented" id="modeSeg">
+        <button type="button" data-mode="pickup" class="on">门店取货</button>
+        <button type="button" data-mode="delivery">送货上门</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. 购买人信息</h2>
+      <div class="grid">
+        <label class="field"><span>姓名 <i>*</i></span><input id="name" placeholder="张三" autocomplete="off" /></label>
+        <label class="field"><span>手机号 <i>*</i></span><input id="phone" placeholder="13800138000" inputmode="numeric" autocomplete="off" /></label>
+        <label class="field"><span>电子邮箱</span><input id="email" placeholder="用于接收订单邮件" autocomplete="off" /></label>
+        <label class="field"><span>身份证号（选填）</span><input id="idCard" placeholder="部分商品或发票需要" autocomplete="off" /></label>
+      </div>
+      <details class="adv">
+        <summary>只有「姓名」一个字段填不进去时</summary>
+        <p class="hint">取货页需要「姓氏 / 名字」两个框，去第 4 节填。</p>
+      </details>
+    </section>
+
+    <section class="card" id="addrCard">
+      <h2>3. 收货地址（送货时用）</h2>
+      <div class="grid">
+        <label class="field"><span>省 / 直辖市</span><input id="province" placeholder="广东省" autocomplete="off" /></label>
+        <label class="field"><span>城市</span><input id="city" placeholder="深圳市" autocomplete="off" /></label>
+        <label class="field"><span>区 / 县</span><input id="district" placeholder="南山区" autocomplete="off" /></label>
+        <label class="field"><span>邮政编码</span><input id="postal" placeholder="518000" autocomplete="off" /></label>
+        <label class="field wide"><span>街道地址</span><input id="street" placeholder="科技园南路 88 号 A 座 1201" autocomplete="off" /></label>
+        <label class="field wide"><span>地址第二行（楼栋 / 单元，选填）</span><input id="street2" autocomplete="off" /></label>
+        <label class="field wide"><span>公司 / 单位（选填）</span><input id="company" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card" id="pickupCard">
+      <h2>4. 门店取货</h2>
+      <p class="hint">
+        Apple 要求「取货时出示的证件姓名与此处填写完全一致」。<b>大陆身份证填中文</b>（如 张 / 三），护照才填英文或拼音。
+        下单后不能改，请核对准确。
+      </p>
+      <div class="grid">
+        <label class="field"><span>姓氏 <i>*</i></span><input id="lastName" placeholder="张" autocomplete="off" /></label>
+        <label class="field"><span>名字 <i>*</i></span><input id="firstName" placeholder="三" autocomplete="off" /></label>
+        <label class="field"><span>身份证后四位 <i>*</i></span><input id="idLast4" placeholder="3823" maxlength="4" inputmode="numeric" autocomplete="off" /></label>
+        <label class="field"><span>取货日期（选填）</span><input id="datePreference" placeholder="留空＝最早可取的日期" autocomplete="off" /></label>
+      </div>
+      <div class="grid">
+        <label class="field"><span>门店名（优先匹配）</span><input id="storeName" placeholder="Apple 深圳万象城" autocomplete="off" /></label>
+        <label class="field"><span>门店关键词（备选）</span><input id="storeKeyword" placeholder="万象城" autocomplete="off" /></label>
+      </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="autoSelectStore" checked /><span>自动选门店（匹配不到就选第一个可取货的）</span></label>
+        <label class="check"><input type="checkbox" id="autoPickTime" checked /><span>自动选最早可取的签到时段</span></label>
+        <label class="check"><input type="checkbox" id="useDifferentContact" /><span>取货人不是购买人本人</span></label>
+      </div>
+      <div class="grid" id="contactBox" style="display:none">
+        <label class="field"><span>取货人姓名</span><input id="contactName" autocomplete="off" /></label>
+        <label class="field"><span>取货人手机号</span><input id="contactPhone" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card" id="paymentCard">
+      <h2>5. 支付方式</h2>
+      <p class="hint">停在支付页时，扩展帮你把「检查订单」点掉，你只需要在下单页核对金额。</p>
+      <div class="segmented" id="paySeg">
+        <button type="button" data-pay="wechat" class="on">微信支付</button>
+        <button type="button" data-pay="alipay">支付宝</button>
+        <button type="button" data-pay="card">信用卡</button>
+      </div>
+
+      <p class="hint" style="margin-top:16px">这个支付方式谁来点？</p>
+      <div class="segmented" id="payModeSeg">
+        <button type="button" data-paymode="auto" class="on">自动帮我点</button>
+        <button type="button" data-paymode="manual">我自己点</button>
+      </div>
+      <p class="hint">
+        选「自动帮我点」：扩展按 Apple 页面上的真实标识（如 <code>checkout-billingOptions-WECHAT</code>）选中支付方式，再点「检查订单」。
+        选「我自己点」：扩展停在支付页等你，点完后按 <b>Alt+Q</b> 继续。
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>6. 发票（选填）</h2>
+      <p class="hint">Apple 会在取货信息和支付方式之间插一页「你需要什么类型的发票？」，这里决定选哪一种。</p>
+      <div class="segmented" id="invSeg">
+        <button type="button" data-inv="personal" class="on">电子发票 - 个人</button>
+        <button type="button" data-inv="company">公司 / 其他</button>
+        <button type="button" data-inv="vat">增值税专用</button>
+      </div>
+      <div class="grid" id="invoiceBox" style="display:none">
+        <label class="field"><span>发票抬头</span><input id="invoiceTitle" autocomplete="off" /></label>
+        <label class="field"><span>纳税人识别号</span><input id="invoiceTaxNo" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>6. 执行方式</h2>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="clickNext" checked /><span>填完自动点「下一步 / 继续」</span></label>
+        <label class="check"><input type="checkbox" id="autoAdvance" checked /><span>连续跑多个步骤，直到出现付款页</span></label>
+        <label class="check"><input type="checkbox" id="autoPlaceOrder" /><span>到检查订单页自动点「立即下单」（<b>会真实下单</b>，90 秒内只点一次）</span></label>
+        <label class="check"><input type="checkbox" id="autoStart" /><span>打开结账页时自动执行（不用按按钮）</span></label>
+      </div>
+      <div class="grid">
+        <label class="field"><span>每步延迟（毫秒）</span><input id="delayMs" type="number" min="0" max="2000" step="10" /></label>
+        <label class="field"><span>最多连续几步</span><input id="maxSteps" type="number" min="1" max="10" /></label>
+      </div>
+      <p class="hint">如果页面是慢网络或经常校验失败，把延迟调到 300–500 毫秒更稳。</p>
+    </section>
+
+    <section class="card">
+      <h2>7. 字段映射（识别不准时才用）</h2>
+      <p class="hint">
+        在结账页点悬浮按钮里的「记录本页字段」，这里会列出页面上所有输入框。
+        如果某个框识别错了，把它的「填什么」改掉，扩展下次就按你的选择填。
+      </p>
+      <div class="inspect-head">
+        <span id="inspectInfo">还没有记录</span>
+        <button class="btn ghost" id="refreshInspect">刷新</button>
+      </div>
+      <div class="tablewrap">
+        <table id="inspectTable">
+          <thead><tr><th>页面上的字段</th><th>自动识别</th><th>填什么</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>8. 数据</h2>
+      <div class="row">
+        <button class="btn" id="exportBtn">导出配置</button>
+        <button class="btn" id="importBtn">导入配置</button>
+        <button class="btn danger" id="clearBtn">清空全部</button>
+        <input type="file" id="importFile" accept="application/json" hidden />
+      </div>
+      <p class="hint">配置存在 chrome.storage.local，只在本机。换电脑时用导出 / 导入。</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>快捷键 <kbd>Alt</kbd>+<kbd>Q</kbd> 随时触发填写</span>
+    <span id="saveState">已保存</span>
+  </footer>
+</div>
+<div class="toastbar" id="toast"></div>
+<script src="defaults.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

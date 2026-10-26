@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  body { width: 260px; margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1d1d1f; }
+  .top { padding: 14px 16px 10px; }
+  h1 { font-size: 14px; margin: 0 0 3px; font-weight: 650; }
+  .sub { font-size: 11.5px; color: #86868b; }
+  .body { padding: 0 16px 14px; display: grid; gap: 8px; }
+  button {
+    border: none; border-radius: 9px; padding: 10px; font-size: 13px; font-family: inherit;
+    cursor: pointer; font-weight: 600; background: #f5f5f7; color: #1d1d1f;
+  }
+  button:hover { background: #ebebef; }
+  button.primary { background: #0071e3; color: #fff; }
+  button.primary:hover { background: #0077ed; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .foot { border-top: 1px solid #f0f0f2; padding: 10px 16px; font-size: 11.5px; color: #86868b; display: flex; justify-content: space-between; }
+  .foot a { color: #0071e3; text-decoration: none; cursor: pointer; }
+  .warn { color: #b25000; font-size: 11.5px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Apple 结账速填</h1>
+    <div class="sub" id="state">检查当前页面…</div>
+  </div>
+  <div class="body">
+    <button class="primary" id="go">一键填写 + 下一步</button>
+    <div class="row">
+      <button id="fill">只填不点</button>
+      <button id="auto">自动到底</button>
+    </div>
+    <button id="opt">打开设置</button>
+  </div>
+  <div class="foot">
+    <span>Alt+Q 快捷触发</span>
+    <a id="opt2">配置 →</a>
+  </div>
+<script src="popup.js"></script>
+</body>
+</html>

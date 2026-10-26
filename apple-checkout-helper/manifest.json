@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Apple 结账速填 · 抢购助手",
+  "version": "1.10.0",
+  "description": "在 apple.com.cn 结账页一键走完取货流程：日期门店、取货人信息、发票、支付方式，停在检查订单页。可接收本机库存监控的有货交接，从购物袋自动结账。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.apple.com.cn/*",
+    "*://*.apple.com/*",
+    "*://secure1.store.apple.com.cn/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Apple 结账速填",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.apple.com.cn/*",
+        "*://*.apple.com/*"
+      ],
+      "js": [
+        "src/defaults.js",
+        "src/core.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/styles.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "commands": {
+    "fill-now": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "立即填写当前页面"
+    }
+  }
+}
